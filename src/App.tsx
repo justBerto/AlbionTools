@@ -35,7 +35,6 @@ const isDev = import.meta.env.DEV;
 export function App() {
   const [currentTab, setCurrentTab] = useState<NavigationTab>("dashboard");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [showMiniOverlay, setShowMiniOverlay] = useState(false);
 
   // Initial First Start Guide Wizard state
   const [showSetupWizard, setShowSetupWizard] = useState<boolean>(() => {
@@ -270,12 +269,7 @@ export function App() {
       case "dashboard":
         return <DashboardView stats={sessionStats} recentLoot={recentLoot} />;
       case "damage-meter":
-        return (
-          <DamageMeterView
-            party={partyMembers}
-            onToggleOverlay={() => setShowMiniOverlay(true)}
-          />
-        );
+        return <DamageMeterView party={partyMembers} />;
       case "dungeon":
         return <DungeonView />;
       case "item-search":
@@ -339,14 +333,6 @@ export function App() {
 
         <main className="flex-1 bg-[#080B11] overflow-hidden relative">
           {renderTabContent()}
-
-          {/* Floating Mini Overlay HUD */}
-          {showMiniOverlay && (
-            <MiniDamageOverlay
-              party={partyMembers}
-              onClose={() => setShowMiniOverlay(false)}
-            />
-          )}
 
           {/* Initial First Start Setup Wizard */}
           {showSetupWizard && (

@@ -17,7 +17,6 @@ import { useToast } from "../../context/ToastContext";
 
 interface DamageMeterViewProps {
   party: PartyMember[];
-  onToggleOverlay?: () => void;
 }
 
 interface SpellDetail {
@@ -29,7 +28,7 @@ interface SpellDetail {
   critRate: number;
 }
 
-export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party, onToggleOverlay }) => {
+export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party }) => {
   const [metricMode, setMetricMode] = useState<"dps" | "hps" | "taken">("dps");
   const [fightSeconds, setFightSeconds] = useState(0);
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
@@ -194,17 +193,14 @@ export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party, onToggl
                     await overlay.setFocus();
                   }
                   showToast("Floating DPS Meter launched (Always On Top)", "success");
-                } else if (onToggleOverlay) {
-                  onToggleOverlay();
-                  showToast("In-app floating DPS meter overlay enabled", "info");
                 } else {
                   window.open("/?overlay=true", "AlbionToolsDPS", "width=360,height=340");
                   showToast("Floating DPS Meter opened in popout window", "info");
                 }
               } catch (err) {
                 console.error("Overlay launch error:", err);
-                onToggleOverlay?.();
-                showToast("Floating DPS Meter active in overlay mode", "info");
+                window.open("/?overlay=true", "AlbionToolsDPS", "width=360,height=340");
+                showToast("Floating DPS Meter opened in popout window", "info");
               }
             }}
             className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 rounded-lg border border-amber-500/30 transition-colors"

@@ -32,6 +32,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![greet, fetch_gameinfo])
+        .setup(|app| {
+            if let Some(main_win) = app.get_webview_window("main") {
+                let _ = main_win.set_theme(Some(tauri::Theme::Dark));
+            }
+            Ok(())
+        })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 if window.label() == "main" {

@@ -8,10 +8,6 @@ import {
   Users,
   Copy,
   ChevronDown,
-  Minus,
-  Square,
-  X,
-  Pin,
   TrendingUp,
   Coins,
   Sparkles,
@@ -35,7 +31,6 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { showToast } = useToast();
   const [showStatsDropdown, setShowStatsDropdown] = useState(false);
-  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
 
   const formatNumber = (num: number) => {
     if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
@@ -81,27 +76,13 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Window Controls */}
-        <div className="flex items-center gap-1">
-          <div className="text-[11px] font-mono text-slate-400 mr-2 px-2.5 py-0.5 bg-slate-900/90 rounded border border-slate-800">
-            {formatUptime(stats.uptimeSeconds)}
+        {/* Right: Session Uptime Badge */}
+        <div className="flex items-center">
+          <div className="text-[11px] font-mono text-slate-300 px-3 py-1 bg-slate-900/90 rounded-lg border border-slate-800 shadow-sm flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-slate-400">Session:</span>
+            <span className="font-bold text-slate-100">{formatUptime(stats.uptimeSeconds)}</span>
           </div>
-          <button
-            onClick={() => setIsAlwaysOnTop(!isAlwaysOnTop)}
-            className={`p-1.5 rounded hover:bg-slate-800 transition-colors ${isAlwaysOnTop ? 'text-amber-400 bg-amber-500/10' : 'text-slate-400'}`}
-            title="Always on top"
-          >
-            <Pin className="w-3.5 h-3.5" />
-          </button>
-          <button className="p-1.5 text-slate-400 hover:bg-slate-800 rounded transition-colors" title="Minimize">
-            <Minus className="w-3.5 h-3.5" />
-          </button>
-          <button className="p-1.5 text-slate-400 hover:bg-slate-800 rounded transition-colors" title="Maximize">
-            <Square className="w-3.5 h-3.5" />
-          </button>
-          <button className="p-1.5 text-slate-400 hover:bg-rose-600 hover:text-white rounded transition-colors" title="Close">
-            <X className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 
