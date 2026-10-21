@@ -1,0 +1,62 @@
+name: Release AlbionTools
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Build Tauri Desktop App & Generate Installers
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'AlbionTools Release ${{ github.ref_name }}'
+          releaseBody: |
+            ## 🛡️ AlbionTools — Companion & Telemetry Suite (${{ github.ref_name }})
+
+            ### 🚀 Fitur Utama & Pembaruan
+            - **Modern Rebuild**: Dibangun menggunakan Tauri 2.0, React 19, TypeScript, dan Tailwind CSS.
+            - **Upstream Parity**: Pemetaan fitur 100% lengkap berdasarkan [Triky313/AlbionOnline-StatisticsAnalysis](https://github.com/Triky313/AlbionOnline-StatisticsAnalysis).
+            - **Live Damage Meter & Floating HUD**: Meteran DPS/HPS *in-game* yang dapat melayang (*always on top*) di atas game Albion Online dan dapat digeser bebas.
+            - **Dungeon Analytics**: Pelacakan menyeluruh untuk Solo, Corrupted, Hellgate, Mists, Abyssal Depths, dan Group Dungeon beserta efisiensi profitabilitas dan timer pengaman pintu masuk 90 detik.
+            - **Dashboard Telemetry**: Top Fame Sources, Top Silver Sources, Matriks Looted Chests (Green, Blue, Purple, Gold), Faction Warfare, dan riwayat aktivitas per jam.
+            - **First Start Setup Wizard**: Panduan otomatis pemilihan bahasa, deteksi direktori instalasi game Albion, dan pemilihan server (Asia/Eropa/Amerika).
+
+            ### 📦 Download Installer:
+            - **`.exe` (NSIS Installer)**: Wizard instalasi lengkap Windows dengan pemilihan bahasa dan shortcut desktop.
+            - **`.msi` (Windows Installer)**: Paket instalasi standar Windows.
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}

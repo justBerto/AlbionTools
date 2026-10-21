@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Fira Code', monospace;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: #080B11;
+    color: #F1F5F9;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+
+  code, pre, .font-mono {
+    font-family: var(--font-mono);
+  }
+}
+
+/* Custom Scrollbar for Sleek Dark Look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.4);
+}
+
+/* Surface styling - Solid matte surfaces with crisp borders per antislop-ui guidelines */
+.glass-panel {
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.glass-card {
+  background: #131b2e;
+  border: 1px solid rgba(148, 163, 184, 0.10);
+}
+
+.glass-card-hover {
+  transition: all 0.15s ease-out;
+}
+.glass-card-hover:hover {
+  background: #18233c;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+/* Floating HUD Overlay - deliberate glass accent for in-game visibility */
+.hud-overlay {
+  background: rgba(11, 16, 27, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Accessible focus ring for keyboard navigation */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 1px;
+}

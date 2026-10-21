@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="64" y1="8" x2="64" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="20" y1="12" x2="108" y2="116" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="40%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <linearGradient id="crystalGrad" x1="64" y1="36" x2="64" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="60%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Outer Hexagonal / Shield Frame -->
+  <path d="M64 10L108 26V68C108 94 89 114 64 120C39 114 20 94 20 68V26L64 10Z" fill="url(#shieldGrad)" stroke="url(#goldGrad)" stroke-width="4" stroke-linejoin="round"/>
+  
+  <!-- Inner Shield Trim -->
+  <path d="M64 18L100 32V66C100 88 84 104 64 110C44 104 28 88 28 66V32L64 18Z" fill="#0A0F1D" stroke="#D97706" stroke-width="1.5" stroke-opacity="0.5"/>
+
+  <!-- Telemetry Pulse Wave / Sword Core -->
+  <path d="M40 64H50L56 50L64 78L72 56L78 64H88" stroke="#38BDF8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+
+  <!-- Central Crest Gem -->
+  <polygon points="64,34 74,48 64,62 54,48" fill="url(#crystalGrad)" stroke="#E0F2FE" stroke-width="1"/>
+  
+  <!-- Gold Rivets -->
+  <circle cx="64" cy="22" r="2.5" fill="#FDE047" />
+  <circle cx="34" cy="34" r="2" fill="#FDE047" />
+  <circle cx="94" cy="34" r="2" fill="#FDE047" />
+  <circle cx="64" cy="106" r="2" fill="#FDE047" />
+</svg>
