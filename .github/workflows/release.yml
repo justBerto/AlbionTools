@@ -46,17 +46,19 @@ jobs:
           releaseBody: |
             ## 🛡️ AlbionTools — Companion & Telemetry Suite (${{ github.ref_name }})
 
-            ### 🚀 Fitur Utama & Pembaruan
-            - **Modern Rebuild**: Dibangun menggunakan Tauri 2.0, React 19, TypeScript, dan Tailwind CSS.
-            - **Upstream Parity**: Pemetaan fitur 100% lengkap berdasarkan [Triky313/AlbionOnline-StatisticsAnalysis](https://github.com/Triky313/AlbionOnline-StatisticsAnalysis).
-            - **Live Damage Meter & Floating HUD**: Meteran DPS/HPS *in-game* yang dapat melayang (*always on top*) di atas game Albion Online dan dapat digeser bebas.
-            - **Dungeon Analytics**: Pelacakan menyeluruh untuk Solo, Corrupted, Hellgate, Mists, Abyssal Depths, dan Group Dungeon beserta efisiensi profitabilitas dan timer pengaman pintu masuk 90 detik.
-            - **Dashboard Telemetry**: Top Fame Sources, Top Silver Sources, Matriks Looted Chests (Green, Blue, Purple, Gold), Faction Warfare, dan riwayat aktivitas per jam.
-            - **First Start Setup Wizard**: Panduan otomatis pemilihan bahasa, deteksi direktori instalasi game Albion, dan pemilihan server (Asia/Eropa/Amerika).
+            ### 🚀 Highlights & Changelog
+            - **Modern Architecture**: Rebuilt with Tauri 2.0, React 19, TypeScript, and Tailwind CSS for blazing performance and ultra-low resource usage.
+            - **Live Damage Meter & Floating Overlay**: Fully automated combat tracking (in-combat / out-of-combat detection) with an always-on-top draggable floating HUD overlay.
+            - **Zero Dummy Data**: Clean live session telemetry across Dashboard, Dungeons, Gathering Stats, Guild, Storage, Map History, Loss Explorer, and Network Event Logger.
+            - **Official GameInfo API Integration**: Inspect player lifetime stats (PvE, Gathering, Crafting) and killboard history via native bridge.
+            - **Gathering & Activity Filters**: Filter harvest statistics by time range (Current Session, Today, Past 7 Days, All Time).
+            - **Dungeon Analytics**: Comprehensive tracking for Solo, Corrupted, Hellgate, Mists, and Group Dungeons with a 90-second entrance safety timer.
+            - **Persistent Configuration**: Saved server region (Asia / Europe / Americas) and client preferences automatically persist across app restarts.
+            - **First-Start Setup Wizard**: Multilingual setup wizard defaulted to English with custom Albion installation path detection.
 
-            ### 📦 Download Installer:
-            - **`.exe` (NSIS Installer)**: Wizard instalasi lengkap Windows dengan pemilihan bahasa dan shortcut desktop.
-            - **`.msi` (Windows Installer)**: Paket instalasi standar Windows.
+            ### 📦 Download Windows Installers:
+            - **`.exe` (NSIS Installer)**: Standard setup wizard with desktop shortcut and language selection.
+            - **`.msi` (Windows Installer)**: Enterprise/automated Windows installer package.
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
