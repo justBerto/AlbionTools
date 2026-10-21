@@ -32,6 +32,8 @@ fn spawn_daemon() -> Option<Child> {
     }
 
     // 2. Relative paths (Development mode)
+    candidates.push(std::path::PathBuf::from("binaries/AlbionTools.Daemon-x86_64-pc-windows-msvc.exe"));
+    candidates.push(std::path::PathBuf::from("binaries/AlbionTools.Daemon.exe"));
     candidates.push(std::path::PathBuf::from("src-tauri/binaries/AlbionTools.Daemon-x86_64-pc-windows-msvc.exe"));
     candidates.push(std::path::PathBuf::from("src-tauri/binaries/AlbionTools.Daemon.exe"));
     candidates.push(std::path::PathBuf::from("daemon/publish/AlbionTools.Daemon.exe"));
