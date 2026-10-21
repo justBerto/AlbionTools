@@ -19,6 +19,8 @@ public class GameEventHandler
 
     private readonly AlbionParser _parser;
     private string _currentLocation = "Thetford";
+    private string _lastClusterIndex = "";
+    private DateTime _lastClusterChangeTime = DateTime.MinValue;
     private string _playerName = "Adventurer";
     private long _localUserObjectId = 0;
 
@@ -320,11 +322,17 @@ public class GameEventHandler
             if (parameters.TryGetValue(8, out object? mapIndex))
             {
                 var raw = mapIndex?.ToString() ?? "Unknown";
-                var resolved = WorldDataManager.Instance.Resolve(raw);
-                _currentLocation = resolved.DisplayName;
-                OnLocationChanged?.Invoke(_currentLocation);
-                OnLocationDetailsChanged?.Invoke(resolved);
-                Log.Information("Location resolved to: {Resolved} (raw: {Raw})", resolved, raw);
+                if (!string.IsNullOrWhiteSpace(raw) && !raw.Equals(_lastClusterIndex, StringComparison.OrdinalIgnoreCase))
+                {
+                    _lastClusterIndex = raw;
+                    _lastClusterChangeTime = DateTime.UtcNow;
+                    var resolved = WorldDataManager.Instance.Resolve(raw);
+                    _currentLocation = resolved.DisplayName;
+                    CombatTracker.Instance.OnClusterChanged();
+                    OnLocationChanged?.Invoke(_currentLocation);
+                    OnLocationDetailsChanged?.Invoke(resolved);
+                    Log.Information("Location joined & resolved to: {Resolved} (raw: {Raw})", resolved, raw);
+                }
             }
         }
         catch (Exception ex)
@@ -340,11 +348,21 @@ public class GameEventHandler
             if (parameters.TryGetValue(0, out object? clusterVal))
             {
                 var raw = clusterVal?.ToString() ?? "";
-                var resolved = WorldDataManager.Instance.Resolve(raw);
-                _currentLocation = resolved.DisplayName;
-                OnLocationChanged?.Invoke(_currentLocation);
-                OnLocationDetailsChanged?.Invoke(resolved);
-                Log.Information("Cluster response changed to: {Resolved} (raw: {Raw})", resolved, raw);
+                if (!string.IsNullOrWhiteSpace(raw) && !raw.Equals(_lastClusterIndex, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Rate limit or check if actually different
+                    if (DateTime.UtcNow - _lastClusterChangeTime > TimeSpan.FromSeconds(2))
+                    {
+                        _lastClusterIndex = raw;
+                        _lastClusterChangeTime = DateTime.UtcNow;
+                        var resolved = WorldDataManager.Instance.Resolve(raw);
+                        _currentLocation = resolved.DisplayName;
+                        CombatTracker.Instance.OnClusterChanged();
+                        OnLocationChanged?.Invoke(_currentLocation);
+                        OnLocationDetailsChanged?.Invoke(resolved);
+                        Log.Information("Cluster response changed to: {Resolved} (raw: {Raw})", resolved, raw);
+                    }
+                }
             }
         }
         catch (Exception ex)

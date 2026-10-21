@@ -126,17 +126,17 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2 bg-slate-900/60 px-3 py-1 rounded-lg border border-slate-800">
           <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium">
             <Users className="w-3.5 h-3.5 text-amber-400" />
-            <span>Party ({party.length}/20)</span>
+            <span>{party.length > 1 ? `Party (${party.length}/20)` : "Solo"}</span>
           </div>
 
           <div className="flex items-center -space-x-1.5 overflow-hidden max-w-[200px]">
-            {party.slice(0, 6).map((member, i) => (
+            {party.slice(0, 6).map((member) => (
               <div
-                key={member.id}
+                key={member.name}
                 className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[9px] font-bold text-slate-200"
                 title={`${member.name} (${member.role})`}
               >
-                {member.name.charAt(0)}
+                {member.name.charAt(0).toUpperCase()}
               </div>
             ))}
             {party.length > 6 && (

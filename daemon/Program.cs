@@ -91,8 +91,14 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
             _ = BroadcastGameStatusAsync();
         };
 
+        string _lastBroadcastedZone = "";
         eventHandler.OnLocationDetailsChanged += (cluster) =>
         {
+            if (cluster.DisplayName.Equals(_lastBroadcastedZone, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+            _lastBroadcastedZone = cluster.DisplayName;
             _currentZone = cluster.DisplayName;
             _zoneTier = cluster.Tier;
             _zoneDanger = cluster.Danger;

@@ -154,8 +154,19 @@ export function App() {
   };
 
   const handleZoneEntered = (zone: { clusterIndex: string; clusterName: string; tier: string; danger: any; enteredAt: string }) => {
-    const enteredTime = new Date(zone.enteredAt).toLocaleTimeString();
     setMapHistory((prev) => {
+      // Prevent consecutive duplicates of the same zone
+      if (prev.length > 0) {
+        const top = prev[0];
+        if (
+          top.clusterName.toLowerCase() === zone.clusterName.toLowerCase() ||
+          (zone.clusterIndex && top.clusterIndex === zone.clusterIndex)
+        ) {
+          return prev;
+        }
+      }
+
+      const enteredTime = new Date(zone.enteredAt).toLocaleTimeString();
       const updated = [...prev];
       if (updated.length > 0 && updated[0].duration === "Active") {
         updated[0] = { ...updated[0], duration: "Visited" };
@@ -182,7 +193,17 @@ export function App() {
   const { sendCommand } = useAlbionSocket({
     onGameStatusUpdate: (status) => setGameStatus((prev) => ({ ...prev, ...status, isSnifferActive: true })),
     onSessionStatsUpdate: (stats) => setSessionStats((prev) => ({ ...prev, ...stats })),
-    onPartyUpdate: (members) => setPartyMembers(members),
+    onPartyUpdate: (members) => {
+      // Ensure strict uniqueness by player name
+      const seen = new Set<string>();
+      const unique = members.filter((m) => {
+        const key = m.name.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setPartyMembers(unique);
+    },
     onLootReceived: (loot) => setRecentLoot((prev) => [loot, ...prev.slice(0, 49)]),
     onZoneEntered: handleZoneEntered,
   });
