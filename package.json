@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:daemon": "dotnet publish daemon/AlbionTools.Daemon.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o src-tauri/binaries && powershell -Command \"Copy-Item -Path src-tauri/binaries/AlbionTools.Daemon.exe -Destination src-tauri/binaries/AlbionTools.Daemon-x86_64-pc-windows-msvc.exe -Force\"",
     "preview": "vite preview",
     "tauri": "tauri"
   },

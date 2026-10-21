@@ -33,6 +33,17 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Build & Bundle Sniffer Daemon Sidecar
+        shell: pwsh
+        run: |
+          dotnet publish daemon/AlbionTools.Daemon.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o src-tauri/binaries
+          Copy-Item -Path src-tauri/binaries/AlbionTools.Daemon.exe -Destination src-tauri/binaries/AlbionTools.Daemon-x86_64-pc-windows-msvc.exe -Force
+
       - name: Install Frontend Dependencies
         run: npm ci
 

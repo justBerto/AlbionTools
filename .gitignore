@@ -24,3 +24,10 @@ src-tauri/target/
 *.sln
 *.sw?
 *.exe
+
+# .NET / C# build outputs
+[Bb]in/
+[Oo]bj/
+daemon/publish/
+src-tauri/binaries/
+
