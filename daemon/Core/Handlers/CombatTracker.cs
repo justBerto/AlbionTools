@@ -15,7 +15,7 @@ public class SpellHitRecord
 public class CombatantRecord
 {
     public long ObjectId { get; set; }
-    public string Name { get; set; } = "Adventurer";
+    public string Name { get; set; } = "";
     public double TotalDamageDealt { get; set; }
     public double TotalDamageTaken { get; set; }
     public double TotalHealingDealt { get; set; }
@@ -43,13 +43,16 @@ public class CombatTracker
     public static CombatTracker Instance => _lazy.Value;
 
     public long LocalPlayerObjectId { get; set; }
-    public string LocalPlayerName { get; set; } = "Adventurer";
+    public string? LocalPlayerName { get; set; }
 
     // Store combatants keyed by unique player name (case-insensitive) to prevent duplicates
     private readonly ConcurrentDictionary<string, CombatantRecord> _combatantsByName = new(StringComparer.OrdinalIgnoreCase);
 
     // Map current instance ObjectId -> Player Name
     private readonly ConcurrentDictionary<long, string> _objectIdToName = new();
+
+    // Active confirmed party member names
+    private readonly HashSet<string> _partyMembers = new(StringComparer.OrdinalIgnoreCase);
 
     public event Action? OnCombatUpdated;
 
@@ -59,11 +62,18 @@ public class CombatTracker
 
     public void SetLocalPlayer(long objectId, string name)
     {
+        if (string.IsNullOrWhiteSpace(name)) return;
+
         LocalPlayerObjectId = objectId;
-        if (!string.IsNullOrWhiteSpace(name))
+
+        // Clean up any old placeholder name (like "Adventurer") if real name is now known
+        if (!string.IsNullOrWhiteSpace(LocalPlayerName) && !LocalPlayerName.Equals(name, StringComparison.OrdinalIgnoreCase))
         {
-            LocalPlayerName = name;
+            _combatantsByName.TryRemove(LocalPlayerName, out _);
         }
+        _combatantsByName.TryRemove("Adventurer", out _);
+
+        LocalPlayerName = name;
 
         // Clean any old objectId mapping for this player
         foreach (var kvp in _objectIdToName.ToList())
@@ -86,11 +96,29 @@ public class CombatTracker
         record.Name = LocalPlayerName;
     }
 
+    public void RegisterEntity(long objectId, string name)
+    {
+        if (objectId == 0 || string.IsNullOrWhiteSpace(name)) return;
+
+        _objectIdToName[objectId] = name;
+
+        // If this entity belongs to someone in party, update their ObjectId
+        if (_partyMembers.Contains(name))
+        {
+            var record = _combatantsByName.GetOrAdd(name, pName => new CombatantRecord
+            {
+                ObjectId = objectId,
+                Name = pName
+            });
+            record.ObjectId = objectId;
+        }
+    }
+
     public void OnClusterChanged()
     {
         // Entity ObjectIds are invalid in the new cluster/map
         _objectIdToName.Clear();
-        if (LocalPlayerObjectId != 0)
+        if (LocalPlayerObjectId != 0 && !string.IsNullOrWhiteSpace(LocalPlayerName))
         {
             _objectIdToName[LocalPlayerObjectId] = LocalPlayerName;
         }
@@ -100,10 +128,20 @@ public class CombatTracker
     public void SetPartyMembers(IEnumerable<string> names)
     {
         var activeNames = new HashSet<string>(names.Where(n => !string.IsNullOrWhiteSpace(n)), StringComparer.OrdinalIgnoreCase);
-        activeNames.Add(LocalPlayerName);
+
+        _partyMembers.Clear();
+        foreach (var n in activeNames)
+        {
+            _partyMembers.Add(n);
+        }
+
+        if (!string.IsNullOrWhiteSpace(LocalPlayerName))
+        {
+            activeNames.Add(LocalPlayerName);
+        }
 
         // Register new party members
-        foreach (var name in activeNames)
+        foreach (var name in _partyMembers)
         {
             if (!_combatantsByName.ContainsKey(name))
             {
@@ -119,7 +157,7 @@ public class CombatTracker
         // Remove members that are no longer in party (except local player)
         foreach (var existingName in _combatantsByName.Keys.ToList())
         {
-            if (!activeNames.Contains(existingName) && !existingName.Equals(LocalPlayerName, StringComparison.OrdinalIgnoreCase))
+            if (!activeNames.Contains(existingName) && (LocalPlayerName == null || !existingName.Equals(LocalPlayerName, StringComparison.OrdinalIgnoreCase)))
             {
                 _combatantsByName.TryRemove(existingName, out _);
             }
@@ -141,48 +179,53 @@ public class CombatTracker
 
             // Resolve causer player name
             string? causerName = null;
-            if (LocalPlayerObjectId != 0 && causerId == LocalPlayerObjectId)
+            if (LocalPlayerObjectId != 0 && causerId == LocalPlayerObjectId && !string.IsNullOrWhiteSpace(LocalPlayerName))
             {
                 causerName = LocalPlayerName;
             }
             else if (_objectIdToName.TryGetValue(causerId, out var name))
             {
-                causerName = name;
-            }
-            else if (LocalPlayerObjectId == 0 && causerId != 0)
-            {
-                // Fallback before local player ID was learned
-                causerName = LocalPlayerName;
-                _objectIdToName[causerId] = LocalPlayerName;
-            }
-
-            if (!string.IsNullOrWhiteSpace(causerName))
-            {
-                var combatant = _combatantsByName.GetOrAdd(causerName, pName => new CombatantRecord
+                // Only track if causer is confirmed local player or party member
+                if (!string.IsNullOrWhiteSpace(LocalPlayerName) && name.Equals(LocalPlayerName, StringComparison.OrdinalIgnoreCase))
                 {
-                    ObjectId = causerId,
-                    Name = pName
-                });
-
-                combatant.FirstCombatAt ??= now;
-                combatant.LastCombatAt = now;
-                combatant.TotalDamageDealt += dmg;
-
-                // Track spell breakdown
-                var spell = combatant.Spells.GetOrAdd(spellIndex, idx => new SpellHitRecord
+                    causerName = LocalPlayerName;
+                }
+                else if (_partyMembers.Contains(name))
                 {
-                    SpellIndex = idx,
-                    Name = ResolveSpellName(idx),
-                    Slot = ResolveSpellSlot(idx)
-                });
-                spell.Hits++;
-                spell.TotalDamage += dmg;
-
-                OnCombatUpdated?.Invoke();
+                    causerName = name;
+                }
             }
+
+            // CRITICAL FIX: Ignore damage from mobs or outside players. Never attribute to "Adventurer"!
+            if (string.IsNullOrWhiteSpace(causerName) || causerName.Equals("Adventurer", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var combatant = _combatantsByName.GetOrAdd(causerName, pName => new CombatantRecord
+            {
+                ObjectId = causerId,
+                Name = pName
+            });
+
+            combatant.FirstCombatAt ??= now;
+            combatant.LastCombatAt = now;
+            combatant.TotalDamageDealt += dmg;
+
+            // Track spell breakdown
+            var spell = combatant.Spells.GetOrAdd(spellIndex, idx => new SpellHitRecord
+            {
+                SpellIndex = idx,
+                Name = ResolveSpellName(idx),
+                Slot = ResolveSpellSlot(idx)
+            });
+            spell.Hits++;
+            spell.TotalDamage += dmg;
+
+            OnCombatUpdated?.Invoke();
 
             // Damage taken by local player
-            if (LocalPlayerObjectId != 0 && affectedId == LocalPlayerObjectId)
+            if (LocalPlayerObjectId != 0 && affectedId == LocalPlayerObjectId && !string.IsNullOrWhiteSpace(LocalPlayerName))
             {
                 if (_combatantsByName.TryGetValue(LocalPlayerName, out var local))
                 {
@@ -194,13 +237,30 @@ public class CombatTracker
         else // Positive healthChange = Healing
         {
             double heal = healthChange;
-            if (LocalPlayerObjectId != 0 && causerId == LocalPlayerObjectId)
+            string? causerName = null;
+            if (LocalPlayerObjectId != 0 && causerId == LocalPlayerObjectId && !string.IsNullOrWhiteSpace(LocalPlayerName))
             {
-                if (_combatantsByName.TryGetValue(LocalPlayerName, out var local))
+                causerName = LocalPlayerName;
+            }
+            else if (_objectIdToName.TryGetValue(causerId, out var name))
+            {
+                if (!string.IsNullOrWhiteSpace(LocalPlayerName) && name.Equals(LocalPlayerName, StringComparison.OrdinalIgnoreCase))
                 {
-                    local.FirstCombatAt ??= now;
-                    local.LastCombatAt = now;
-                    local.TotalHealingDealt += heal;
+                    causerName = LocalPlayerName;
+                }
+                else if (_partyMembers.Contains(name))
+                {
+                    causerName = name;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(causerName) && !causerName.Equals("Adventurer", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_combatantsByName.TryGetValue(causerName, out var healer))
+                {
+                    healer.FirstCombatAt ??= now;
+                    healer.LastCombatAt = now;
+                    healer.TotalHealingDealt += heal;
                     OnCombatUpdated?.Invoke();
                 }
             }
@@ -225,14 +285,26 @@ public class CombatTracker
             }
         }
 
+        foreach (var member in _partyMembers)
+        {
+            _combatantsByName[member] = new CombatantRecord
+            {
+                ObjectId = (long)Math.Abs(member.GetHashCode()),
+                Name = member
+            };
+        }
+
         OnCombatUpdated?.Invoke();
         Log.Information("CombatTracker: State reset to zero.");
     }
 
     public object[] BuildPartyMembersPayload()
     {
-        // Ensure local player record is always present
-        if (!_combatantsByName.ContainsKey(LocalPlayerName))
+        // Never include placeholder "Adventurer" if real name is known
+        _combatantsByName.TryRemove("Adventurer", out _);
+
+        // Ensure local player record is present if known
+        if (!string.IsNullOrWhiteSpace(LocalPlayerName) && !_combatantsByName.ContainsKey(LocalPlayerName))
         {
             _combatantsByName[LocalPlayerName] = new CombatantRecord
             {
@@ -241,7 +313,30 @@ public class CombatTracker
             };
         }
 
-        var list = _combatantsByName.Values.ToList();
+        var list = _combatantsByName.Values
+            .Where(c => !string.IsNullOrWhiteSpace(c.Name) && !c.Name.Equals("Adventurer", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (list.Count == 0)
+        {
+            string fallbackName = !string.IsNullOrWhiteSpace(LocalPlayerName) ? LocalPlayerName : "Waiting for Character...";
+            return new[]
+            {
+                new
+                {
+                    id = (LocalPlayerObjectId != 0 ? LocalPlayerObjectId : 1).ToString(),
+                    name = fallbackName,
+                    guild = (string?)null,
+                    currentHp = 3000,
+                    maxHp = 3000,
+                    dps = 0,
+                    damagePercentage = 100.0,
+                    hps = 0,
+                    role = "DPS",
+                    spells = Array.Empty<object>()
+                }
+            };
+        }
 
         double totalPartyDamage = list.Sum(c => c.TotalDamageDealt);
         if (totalPartyDamage <= 0) totalPartyDamage = 1.0;

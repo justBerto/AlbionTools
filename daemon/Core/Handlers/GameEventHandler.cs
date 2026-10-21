@@ -21,7 +21,7 @@ public class GameEventHandler
     private string _currentLocation = "Thetford";
     private string _lastClusterIndex = "";
     private DateTime _lastClusterChangeTime = DateTime.MinValue;
-    private string _playerName = "Adventurer";
+    private string _playerName = "";
     private long _localUserObjectId = 0;
 
     // Domain events
@@ -88,6 +88,9 @@ public class GameEventHandler
                 break;
             case EventCodes.PartyDisbanded:
                 HandlePartyDisbanded();
+                break;
+            case EventCodes.NewCharacter:
+                HandleNewCharacter(parameters);
                 break;
         }
     }
@@ -313,11 +316,13 @@ public class GameEventHandler
             if (parameters.TryGetValue(2, out object? username))
             {
                 _playerName = username?.ToString() ?? "";
-                OnPlayerIdentified?.Invoke(_playerName);
-                Log.Information("Player identified: {PlayerName} (ObjectId: {ObjectId})", _playerName, _localUserObjectId);
+                if (!string.IsNullOrWhiteSpace(_playerName))
+                {
+                    OnPlayerIdentified?.Invoke(_playerName);
+                    Log.Information("Player identified: {PlayerName} (ObjectId: {ObjectId})", _playerName, _localUserObjectId);
+                    CombatTracker.Instance.SetLocalPlayer(_localUserObjectId, _playerName);
+                }
             }
-
-            CombatTracker.Instance.SetLocalPlayer(_localUserObjectId, _playerName);
 
             if (parameters.TryGetValue(8, out object? mapIndex))
             {
@@ -487,6 +492,26 @@ public class GameEventHandler
         _partyMembers.Clear();
         CombatTracker.Instance.SetPartyMembers(_partyMembers);
         OnPartyUpdated?.Invoke(new List<string>());
+    }
+
+    private void HandleNewCharacter(Dictionary<byte, object> parameters)
+    {
+        try
+        {
+            if (parameters.TryGetValue(0, out object? objId) && parameters.TryGetValue(1, out object? nameObj))
+            {
+                long id = SafeToLong(objId);
+                string name = nameObj?.ToString() ?? "";
+                if (id != 0 && !string.IsNullOrWhiteSpace(name))
+                {
+                    CombatTracker.Instance.RegisterEntity(id, name);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Error parsing NewCharacter event");
+        }
     }
 
     public static int SafeToInt(object? value) => value switch
