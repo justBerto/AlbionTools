@@ -60,8 +60,8 @@ export const MiniDamageOverlay: React.FC<MiniDamageOverlayProps> = ({
   }, []);
 
   const containerClasses = isStandalone
-    ? "h-screen w-screen bg-[#070A10]/95 backdrop-blur-md border border-slate-800 flex flex-col justify-between select-none overflow-hidden"
-    : "fixed bottom-6 right-6 z-[999] w-80 hud-overlay rounded-2xl shadow-2xl overflow-hidden select-none animate-in fade-in duration-150 border border-slate-800";
+    ? "h-screen w-screen bg-[#090D16] border border-slate-800 flex flex-col justify-between select-none overflow-hidden"
+    : "fixed bottom-6 right-6 z-[999] w-80 bg-[#090D16] rounded-2xl shadow-2xl overflow-hidden select-none border border-slate-800";
 
   return (
     <div className={containerClasses}>

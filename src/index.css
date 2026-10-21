@@ -60,11 +60,9 @@
   border-color: rgba(245, 158, 11, 0.4);
 }
 
-/* Floating HUD Overlay - deliberate glass accent for in-game visibility */
+/* Floating HUD Overlay - deliberate solid dark accent for in-game visibility */
 .hud-overlay {
-  background: rgba(11, 16, 27, 0.88);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: #0b101b;
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 

@@ -185,9 +185,12 @@ export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party }) => {
                       title: "AlbionTools DPS Meter",
                       width: 360,
                       height: 340,
+                      minWidth: 260,
+                      minHeight: 180,
                       alwaysOnTop: true,
                       decorations: false,
-                      transparent: true,
+                      transparent: false,
+                      resizable: true,
                     });
                     await overlay.show();
                     await overlay.setFocus();

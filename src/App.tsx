@@ -32,7 +32,85 @@ import { FirstStartGuideModal } from "./components/setup-wizard/FirstStartGuideM
 
 const isDev = import.meta.env.DEV;
 
+const isOverlayStandalone = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("overlay") === "true";
+
+function OverlayStandaloneApp() {
+  const [partyMembers, setPartyMembers] = useState<PartyMember[]>(isDev ? [
+    {
+      id: "1",
+      name: "LordAlbion",
+      guild: "Black Rose Vanguard",
+      currentHp: 3850,
+      maxHp: 3850,
+      dps: 1845,
+      damagePercentage: 38.4,
+      hps: 0,
+      role: "DPS",
+    },
+    {
+      id: "2",
+      name: "ValkyrieHeals",
+      guild: "Black Rose Vanguard",
+      currentHp: 2900,
+      maxHp: 2900,
+      dps: 120,
+      damagePercentage: 2.5,
+      hps: 1250,
+      role: "Healer",
+    },
+    {
+      id: "3",
+      name: "IronBastion",
+      guild: "Black Rose Vanguard",
+      currentHp: 5200,
+      maxHp: 5200,
+      dps: 450,
+      damagePercentage: 9.4,
+      hps: 0,
+      role: "Tank",
+    },
+    {
+      id: "4",
+      name: "ShadowStrike",
+      guild: "Black Rose Vanguard",
+      currentHp: 3100,
+      maxHp: 3100,
+      dps: 1420,
+      damagePercentage: 29.5,
+      hps: 0,
+      role: "DPS",
+    },
+    {
+      id: "5",
+      name: "FrostArchon",
+      guild: "Black Rose Vanguard",
+      currentHp: 2750,
+      maxHp: 2750,
+      dps: 975,
+      damagePercentage: 20.2,
+      hps: 0,
+      role: "Support",
+    },
+  ] : []);
+
+  useAlbionSocket({
+    onPartyUpdate: (members) => setPartyMembers(members),
+  });
+
+  return (
+    <MiniDamageOverlay
+      party={partyMembers}
+      onClose={() => window.close()}
+      isStandalone={true}
+    />
+  );
+}
+
 export function App() {
+  if (isOverlayStandalone) {
+    return <OverlayStandaloneApp />;
+  }
+
   const [currentTab, setCurrentTab] = useState<NavigationTab>("dashboard");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -40,9 +118,6 @@ export function App() {
   const [showSetupWizard, setShowSetupWizard] = useState<boolean>(() => {
     return localStorage.getItem("albiontools_setup_completed") !== "true";
   });
-
-  // Standalone floating overlay window check (Tauri or popout window)
-  const isOverlayStandalone = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("overlay") === "true";
 
   // Helper to load persistent server choice
   const getInitialServer = (): ServerRegion => {
@@ -300,17 +375,6 @@ export function App() {
         return <DashboardView stats={sessionStats} recentLoot={recentLoot} />;
     }
   };
-
-  // If this window was launched specifically as a floating overlay, render only the HUD
-  if (isOverlayStandalone) {
-    return (
-      <MiniDamageOverlay
-        party={partyMembers}
-        onClose={() => window.close()}
-        isStandalone={true}
-      />
-    );
-  }
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#080B11] text-slate-100 font-['Inter']">
