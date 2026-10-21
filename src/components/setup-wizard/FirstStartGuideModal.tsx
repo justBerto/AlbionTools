@@ -73,6 +73,8 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
     }
   };
 
+  const isId = language === "id";
+
   return (
     <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
       <div className="w-full max-w-2xl bg-[#0B0F19] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col font-['Inter']">
@@ -89,7 +91,9 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
                 AlbionTools — Initial Setup Wizard
               </h2>
               <p className="text-xs text-slate-400">
-                Langkah {currentStep} dari {totalSteps}: Konfigurasi Awal Aplikasi
+                {isId
+                  ? `Langkah ${currentStep} dari ${totalSteps}: Konfigurasi Awal Aplikasi`
+                  : `Step ${currentStep} of ${totalSteps}: Initial Application Setup`}
               </p>
             </div>
           </div>
@@ -119,11 +123,13 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
               <div className="flex items-center gap-2">
                 <Globe className="w-5 h-5 text-amber-400" />
                 <h3 className="text-lg font-bold text-slate-100 font-['Outfit']">
-                  Pilih Bahasa Antarmuka / Language
+                  {isId ? "Pilih Bahasa Antarmuka / Language" : "Select Interface Language"}
                 </h3>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Pilih bahasa default untuk tampilan menu, statistik, dan navigasi AlbionTools. Anda dapat mengubahnya kapan saja melalui menu Pengaturan.
+                {isId
+                  ? "Pilih bahasa default untuk tampilan menu, statistik, dan navigasi AlbionTools. Anda dapat mengubahnya kapan saja melalui menu Pengaturan."
+                  : "Choose the default language for AlbionTools menus, statistics, and navigation. You can change this anytime via the Settings menu."}
               </p>
 
               <div className="grid grid-cols-2 gap-3 pt-2">
@@ -161,11 +167,13 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
               <div className="flex items-center gap-2">
                 <FolderSearch className="w-5 h-5 text-amber-400" />
                 <h3 className="text-lg font-bold text-slate-100 font-['Outfit']">
-                  Lokasi Folder Instalasi Albion Online
+                  {isId ? "Lokasi Folder Instalasi Albion Online" : "Albion Online Installation Directory"}
                 </h3>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                AlbionTools membutuhkan akses folder <code>/game</code> untuk memverifikasi file biner dan sinkronisasi manifest data permainan. Pilih versi client yang Anda gunakan:
+                {isId
+                  ? "AlbionTools membutuhkan akses folder /game untuk memverifikasi file biner dan sinkronisasi manifest data permainan. Pilih versi client yang Anda gunakan:"
+                  : "AlbionTools requires access to your /game folder to verify game binaries and synchronize game manifest data. Select the client version you use:"}
               </p>
 
               {/* Tutorial / Visual Guide from Upstream */}
@@ -224,7 +232,7 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
               {/* Path Input Field */}
               <div className="space-y-1.5 pt-1">
                 <label className="text-xs font-semibold text-slate-300">
-                  Path Direktori Terpilih:
+                  {isId ? "Path Direktori Terpilih:" : "Selected Directory Path:"}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -232,7 +240,7 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
                     value={gameFolder}
                     onChange={(e) => setGameFolder(e.target.value)}
                     className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-amber-500"
-                    placeholder="Contoh: C:\Program Files\AlbionOnline\game"
+                    placeholder={isId ? "Contoh: C:\\Program Files\\AlbionOnline\\game" : "Example: C:\\Program Files\\AlbionOnline\\game"}
                   />
                 </div>
               </div>
@@ -245,11 +253,13 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
               <div className="flex items-center gap-2">
                 <Server className="w-5 h-5 text-amber-400" />
                 <h3 className="text-lg font-bold text-slate-100 font-['Outfit']">
-                  Pilih Server Default Albion Online
+                  {isId ? "Pilih Server Default Albion Online" : "Select Default Game Server"}
                 </h3>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Pilih server utama tempat karakter Anda bermain untuk mengarahkan port sniffer dan kalkulator market:
+                {isId
+                  ? "Pilih server utama tempat karakter Anda bermain untuk mengarahkan port sniffer dan kalkulator market:"
+                  : "Choose your primary server realm to route network sniffer ports and market price analysis:"}
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
@@ -303,11 +313,13 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
               <div className="flex items-center gap-2">
                 <Cpu className="w-5 h-5 text-amber-400" />
                 <h3 className="text-lg font-bold text-slate-100 font-['Outfit']">
-                  Metode Penyadapan Paket Jaringan (Sniffer Driver)
+                  {isId ? "Metode Penyadapan Paket Jaringan (Sniffer Driver)" : "Network Packet Sniffing Driver"}
                 </h3>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                AlbionTools membaca event permainan menggunakan penyadapan paket Photon UDP. Untuk kestabilan tertinggi dan zero latency, sangat disarankan memasang driver <strong>Npcap</strong>.
+                {isId
+                  ? "AlbionTools membaca event permainan menggunakan penyadapan paket Photon UDP. Untuk kestabilan tertinggi dan zero latency, sangat disarankan memasang driver Npcap."
+                  : "AlbionTools decodes live game events by monitoring Photon UDP packets. For maximum stability and zero latency, installing the Npcap driver is highly recommended."}
               </p>
 
               <div className="space-y-3 pt-1">
@@ -328,13 +340,15 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
                   />
                   <div className="flex-1 text-xs">
                     <div className="font-bold text-slate-100 flex items-center gap-2">
-                      <span>Npcap Packet Driver (Sangat Direkomendasikan)</span>
+                      <span>{isId ? "Npcap Packet Driver (Sangat Direkomendasikan)" : "Npcap Packet Driver (Highly Recommended)"}</span>
                       <span className="px-1.5 py-0.2 rounded text-[9px] bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
                         BEST PERFORMANCE
                       </span>
                     </div>
                     <p className="text-slate-400 mt-1">
-                      Membaca paket UDP secara instan tanpa membebani CPU. Jika belum terpasang di Windows Anda, Anda dapat mengunduhnya secara gratis.
+                      {isId
+                        ? "Membaca paket UDP secara instan tanpa membebani CPU. Jika belum terpasang di Windows Anda, Anda dapat mengunduhnya secara gratis."
+                        : "Captures UDP packets with zero CPU overhead. If not installed on your system, you can download it for free."}
                     </p>
                     <a
                       href="https://npcap.com/#download"
@@ -343,7 +357,7 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
                       className="inline-flex items-center gap-1 text-[11px] text-sky-400 hover:text-sky-300 mt-2 font-medium"
                     >
                       <ExternalLink className="w-3 h-3" />
-                      <span>Unduh Npcap Installer Resmi (npcap.com)</span>
+                      <span>{isId ? "Unduh Npcap Installer Resmi (npcap.com)" : "Download Official Npcap Installer (npcap.com)"}</span>
                     </a>
                   </div>
                 </div>
@@ -368,7 +382,9 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
                       Raw Socket Telemetry (Fallback)
                     </div>
                     <p className="text-slate-400 mt-1">
-                      Menggunakan Windows socket bawaan tanpa driver eksternal. Mode ini membutuhkan aplikasi dijalankan sebagai Administrator pada sebagian sistem.
+                      {isId
+                        ? "Menggunakan Windows socket bawaan tanpa driver eksternal. Mode ini membutuhkan aplikasi dijalankan sebagai Administrator pada sebagian sistem."
+                        : "Uses built-in Windows raw sockets without external drivers. May require running as Administrator on some systems."}
                     </p>
                   </div>
                 </div>
@@ -388,14 +404,18 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
               }`}
             >
               <ChevronLeft className="w-3.5 h-3.5" />
-              <span>Sebelumnya</span>
+              <span>{isId ? "Sebelumnya" : "Back"}</span>
             </button>
 
             <button
               onClick={handleNext}
               className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors shadow-lg shadow-amber-950/40"
             >
-              <span>{currentStep === totalSteps ? "Selesai & Buka Aplikasi" : "Lanjutkan"}</span>
+              <span>
+                {currentStep === totalSteps
+                  ? isId ? "Selesai & Buka Aplikasi" : "Finish & Launch AlbionTools"
+                  : isId ? "Lanjutkan" : "Continue"}
+              </span>
               {currentStep === totalSteps ? (
                 <ShieldCheck className="w-4 h-4" />
               ) : (

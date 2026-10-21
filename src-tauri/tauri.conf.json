@@ -20,20 +20,6 @@
         "minHeight": 640,
         "center": true,
         "decorations": true
-      },
-      {
-        "label": "overlay",
-        "title": "AlbionTools DPS Meter",
-        "url": "/?overlay=true",
-        "width": 360,
-        "height": 340,
-        "minWidth": 280,
-        "minHeight": 200,
-        "alwaysOnTop": true,
-        "decorations": false,
-        "transparent": true,
-        "visible": false,
-        "shadow": false
       }
     ],
     "security": {
