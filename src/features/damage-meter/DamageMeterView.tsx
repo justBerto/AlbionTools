@@ -17,6 +17,7 @@ import { useToast } from "../../context/ToastContext";
 
 interface DamageMeterViewProps {
   party: PartyMember[];
+  onResetCombat?: () => void;
 }
 
 interface SpellDetail {
@@ -28,7 +29,7 @@ interface SpellDetail {
   critRate: number;
 }
 
-export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party }) => {
+export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party, onResetCombat }) => {
   const [metricMode, setMetricMode] = useState<"dps" | "hps" | "taken">("dps");
   const [fightSeconds, setFightSeconds] = useState(0);
   const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
@@ -73,6 +74,7 @@ export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party }) => {
     setFightSeconds(0);
     setInCombat(false);
     setExpandedPlayerId(null);
+    onResetCombat?.();
     showToast("Combat session reset. Awaiting next damage event.", "info");
   };
 

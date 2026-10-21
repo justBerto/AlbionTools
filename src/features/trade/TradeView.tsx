@@ -15,6 +15,14 @@ import {
 import { fetchLiveMarketPrices, MarketPriceRecord } from "../../services/albionDataApi";
 
 export const TradeView: React.FC = () => {
+  const getInitialRegion = (): "Europe" | "Americas" | "Asia" => {
+    const saved = localStorage.getItem("albiontools_server");
+    if (saved?.includes("Asia")) return "Asia";
+    if (saved?.includes("Americas")) return "Americas";
+    return "Europe";
+  };
+
+  const [selectedRegion, setSelectedRegion] = useState<"Europe" | "Americas" | "Asia">(getInitialRegion);
   const [selectedItemId, setSelectedItemId] = useState("T8_MAIN_SWORD");
   const [selectedItemName, setSelectedItemName] = useState("Elder's Broadsword");
   const [prices, setPrices] = useState<MarketPriceRecord[]>([]);
@@ -30,16 +38,16 @@ export const TradeView: React.FC = () => {
     { id: "T8_CLOTH", name: "Elder's Cloth (Refined)" },
   ];
 
-  const loadPrices = async (id: string) => {
+  const loadPrices = async (id: string, region: "Europe" | "Americas" | "Asia" = selectedRegion) => {
     setIsLoading(true);
-    const data = await fetchLiveMarketPrices(id, "Europe");
+    const data = await fetchLiveMarketPrices(id, region);
     setPrices(data);
     setIsLoading(false);
   };
 
   useEffect(() => {
-    loadPrices(selectedItemId);
-  }, [selectedItemId]);
+    loadPrices(selectedItemId, selectedRegion);
+  }, [selectedItemId, selectedRegion]);
 
   const taxRate = hasPremium ? 0.04 : 0.08;
   const setupFee = 0.025;

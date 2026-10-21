@@ -91,14 +91,30 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
             _ = BroadcastGameStatusAsync();
         };
 
-        eventHandler.OnLocationChanged += (loc) =>
+        eventHandler.OnLocationDetailsChanged += (cluster) =>
         {
-            _currentZone = loc;
-            var (tier, danger) = DetermineZoneInfo(loc);
-            _zoneTier = tier;
-            _zoneDanger = danger;
-            Console.WriteLine($"[ZONE] Entered: {loc} ({tier}, {danger})");
+            _currentZone = cluster.DisplayName;
+            _zoneTier = cluster.Tier;
+            _zoneDanger = cluster.Danger;
+            Console.WriteLine($"[ZONE] Entered: {cluster.DisplayName} ({cluster.Tier}, {cluster.Danger})");
             _ = BroadcastGameStatusAsync();
+            _ = BroadcastJsonAsync(new
+            {
+                @event = "ZONE_ENTERED",
+                data = new
+                {
+                    clusterIndex = cluster.ClusterIndex,
+                    clusterName = cluster.DisplayName,
+                    tier = cluster.Tier,
+                    danger = cluster.Danger,
+                    enteredAt = DateTime.UtcNow.ToString("o")
+                }
+            });
+        };
+
+        CombatTracker.Instance.OnCombatUpdated += () =>
+        {
+            _ = BroadcastPartyUpdateAsync();
         };
 
         eventHandler.OnSilverReceived += (tx) =>
@@ -262,6 +278,11 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
                 {
                     await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
                 }
+                else if (result.MessageType == WebSocketMessageType.Text)
+                {
+                    var msg = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    HandleClientCommand(msg);
+                }
             }
         }
         catch
@@ -348,19 +369,7 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
 
     private static object BuildPartyPayload()
     {
-        var members = _partyMemberNames.Select((name, idx) => new
-        {
-            id = (idx + 1).ToString(),
-            name,
-            guild = (string?)null,
-            currentHp = 3000,
-            maxHp = 3000,
-            dps = 0,
-            damagePercentage = 0.0,
-            hps = 0,
-            role = "DPS"
-        }).ToArray();
-
+        var members = CombatTracker.Instance.BuildPartyMembersPayload();
         return new
         {
             @event = "PARTY_UPDATE",
@@ -372,35 +381,38 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
     private static async Task BroadcastSessionStatsAsync() => await BroadcastJsonAsync(BuildSessionStatsPayload());
     private static async Task BroadcastPartyUpdateAsync() => await BroadcastJsonAsync(BuildPartyPayload());
 
-    private static (string Tier, string Danger) DetermineZoneInfo(string location)
+    private static void HandleClientCommand(string json)
     {
-        if (string.IsNullOrWhiteSpace(location) || location == "Unknown Location")
-            return ("T0", "Blue");
-
-        var loc = location.ToLowerInvariant();
-        if (loc.Contains("thetford") || loc.Contains("lymhurst") || loc.Contains("bridgewatch") ||
-            loc.Contains("martlock") || loc.Contains("fort sterling") || loc.Contains("cross"))
+        try
         {
-            return ("Tier 4", "Blue");
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("action", out var actionProp))
+            {
+                string action = actionProp.GetString() ?? "";
+                if (action.Equals("RESET_SESSION", StringComparison.OrdinalIgnoreCase))
+                {
+                    _totalSilver = 0;
+                    _totalFame = 0;
+                    _reSpecPoints = 0;
+                    _sessionStartTime = DateTime.UtcNow;
+                    CombatTracker.Instance.Reset();
+                    _ = BroadcastSessionStatsAsync();
+                    _ = BroadcastGameStatusAsync();
+                    _ = BroadcastPartyUpdateAsync();
+                    Console.WriteLine("[COMMAND] Session reset executed.");
+                }
+                else if (action.Equals("RESET_COMBAT", StringComparison.OrdinalIgnoreCase))
+                {
+                    CombatTracker.Instance.Reset();
+                    _ = BroadcastPartyUpdateAsync();
+                    Console.WriteLine("[COMMAND] Combat meter reset executed.");
+                }
+            }
         }
-        if (loc.Contains("caerleon"))
+        catch (Exception ex)
         {
-            return ("Tier 5", "Red");
+            Log.Debug(ex, "Error handling client command");
         }
-        if (loc.Contains("brecilien") || loc.Contains("mist"))
-        {
-            return ("Tier 6", "Mists");
-        }
-        if (loc.Contains("avalon") || loc.Contains("road"))
-        {
-            return ("Tier 6", "Avalon");
-        }
-        if (loc.Contains("rest") || loc.Contains("portal") || loc.Contains("black market"))
-        {
-            return ("Tier 7", "Black");
-        }
-
-        return ("Tier 5", "Yellow");
     }
 
     private static SocketsPacketProvider SetupRawSockets(AlbionParser albionParser, Action onGameData, Action<IPAddress> onServerPacket)

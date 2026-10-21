@@ -27,6 +27,8 @@ export interface PlayerSearchResult {
   Gathering?: {
     All: { Total: number };
   };
+  Avatar?: string;
+  AvatarRing?: string;
 }
 
 export interface KillEvent {
@@ -126,6 +128,41 @@ export async function getPlayerDetails(
   try {
     const data = await executeApiRequest(url);
     const stats = data.LifetimeStatistics || {};
+
+    let avatar = data.Avatar || "";
+    let avatarRing = data.AvatarRing || "";
+
+    // Upstream pattern: If avatar or avatar ring is not on the player object, grab from recent death/kill
+    if (!avatar || !avatarRing) {
+      try {
+        const deathsData = await executeApiRequest(`${baseUrl}/players/${playerId}/deaths`);
+        if (Array.isArray(deathsData) && deathsData.length > 0) {
+          const victim = deathsData[0]?.Victim;
+          if (victim) {
+            if (!avatar && victim.Avatar) avatar = victim.Avatar;
+            if (!avatarRing && victim.AvatarRing) avatarRing = victim.AvatarRing;
+          }
+        }
+      } catch {
+        // Fallback silently
+      }
+    }
+
+    if (!avatar || !avatarRing) {
+      try {
+        const killsData = await executeApiRequest(`${baseUrl}/players/${playerId}/kills`);
+        if (Array.isArray(killsData) && killsData.length > 0) {
+          const killer = killsData[0]?.Killer;
+          if (killer) {
+            if (!avatar && killer.Avatar) avatar = killer.Avatar;
+            if (!avatarRing && killer.AvatarRing) avatarRing = killer.AvatarRing;
+          }
+        }
+      } catch {
+        // Fallback silently
+      }
+    }
+
     return {
       Id: data.Id,
       Name: data.Name,
@@ -133,6 +170,8 @@ export async function getPlayerDetails(
       GuildName: data.GuildName || undefined,
       AllianceId: data.AllianceId || undefined,
       AllianceName: data.AllianceName || undefined,
+      Avatar: avatar || undefined,
+      AvatarRing: avatarRing || undefined,
       KillFame: data.KillFame || 0,
       DeathFame: data.DeathFame || 0,
       FameRatio: data.FameRatio || 0,

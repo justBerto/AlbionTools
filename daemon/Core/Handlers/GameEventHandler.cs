@@ -7,7 +7,7 @@ using System.Text.Json;
 namespace AMT.Core.Handlers;
 
 /// <summary>
-/// Handles Albion Online marketplace and loot events from the network stream.
+/// Handles Albion Online marketplace, combat, and loot events from the network stream.
 /// Subscribes to AlbionParser events and emits domain-level events.
 /// </summary>
 public class GameEventHandler
@@ -20,6 +20,7 @@ public class GameEventHandler
     private readonly AlbionParser _parser;
     private string _currentLocation = "Thetford";
     private string _playerName = "Adventurer";
+    private long _localUserObjectId = 0;
 
     // Domain events
     public event Action<List<MarketOffer>>? OnMarketOffersReceived;
@@ -30,6 +31,7 @@ public class GameEventHandler
     public event Action<long>? OnReSpecReceived;
     public event Action<List<string>>? OnPartyUpdated;
     public event Action<string>? OnLocationChanged;
+    public event Action<ResolvedCluster>? OnLocationDetailsChanged;
     public event Action<string>? OnPlayerIdentified;
     public event Action<int, Dictionary<byte, object>>? OnRawEvent;
     public event Action<int, Dictionary<byte, object>>? OnRawResponse;
@@ -38,6 +40,7 @@ public class GameEventHandler
 
     public string CurrentLocation => _currentLocation;
     public string PlayerName => _playerName;
+    public long LocalUserObjectId => _localUserObjectId;
     public IReadOnlyList<string> PartyMembers => _partyMembers;
 
     public GameEventHandler(AlbionParser parser)
@@ -65,6 +68,12 @@ public class GameEventHandler
                 break;
             case EventCodes.UpdateReSpecPoints:
                 HandleUpdateReSpec(parameters);
+                break;
+            case EventCodes.HealthUpdate:
+                HandleHealthUpdate(parameters);
+                break;
+            case EventCodes.HealthUpdates:
+                HandleHealthUpdates(parameters);
                 break;
             case EventCodes.PartyJoined:
                 HandlePartyJoined(parameters);
@@ -108,6 +117,9 @@ public class GameEventHandler
     {
         switch ((OperationCodes)operationCode)
         {
+            case OperationCodes.AuctionGetOffers:
+                Log.Debug("AuctionGetOffers Request intercepted");
+                break;
             case OperationCodes.ChangeCluster:
                 HandleChangeClusterRequest(parameters);
                 break;
@@ -118,48 +130,18 @@ public class GameEventHandler
     {
         try
         {
-            Log.Information("Processing AuctionGetOffers response with {ParamCount} parameters.", parameters.Count);
-
-            // Find parameter containing json array (usually param 0)
-            object? auctionData = null;
-            if (parameters.TryGetValue(0, out var p0)) auctionData = p0;
-            else if (parameters.TryGetValue(1, out var p1)) auctionData = p1;
-
-            if (auctionData == null)
+            if (parameters.TryGetValue(0, out object? rawJsonObj))
             {
-                Log.Warning("AuctionGetOffers had no data in param 0 or 1. Keys present: {Keys}",
-                    string.Join(", ", parameters.Keys));
-                return;
-            }
-
-            var jsonList = ExtractJsonStrings(auctionData);
-            Log.Information("Found {Count} raw offer JSON strings in AuctionGetOffers response.", jsonList.Count);
-
-            var offers = new List<MarketOffer>();
-            foreach (var json in jsonList)
-            {
-                if (string.IsNullOrWhiteSpace(json)) continue;
-                try
+                var jsonStr = rawJsonObj as string ?? rawJsonObj?.ToString();
+                if (!string.IsNullOrEmpty(jsonStr))
                 {
-                    var offer = JsonSerializer.Deserialize<MarketOffer>(json, JsonOptions);
-                    if (offer != null)
+                    var offers = JsonSerializer.Deserialize<List<MarketOffer>>(jsonStr, JsonOptions);
+                    if (offers != null && offers.Count > 0)
                     {
-                        offer.Location = LocationResolver.CanonicalCity(_currentLocation);
-                        offer.OfferType = "sell_order";
-                        offer.CapturedAt = DateTime.UtcNow;
-                        offers.Add(offer);
+                        Log.Information("Captured {Count} market sell offers at {Location}", offers.Count, _currentLocation);
+                        OnMarketOffersReceived?.Invoke(offers);
                     }
                 }
-                catch (Exception ex)
-                {
-                    Log.Debug(ex, "Failed to deserialize market offer JSON: {Snippet}", json.Length > 100 ? json[..100] : json);
-                }
-            }
-
-            if (offers.Count > 0)
-            {
-                Log.Information("Successfully parsed {Count} marketplace sell offers at {Location}!", offers.Count, _currentLocation);
-                OnMarketOffersReceived?.Invoke(offers);
             }
         }
         catch (Exception ex)
@@ -172,40 +154,18 @@ public class GameEventHandler
     {
         try
         {
-            Log.Information("Processing AuctionGetRequests response with {ParamCount} parameters.", parameters.Count);
-
-            object? auctionData = null;
-            if (parameters.TryGetValue(0, out var p0)) auctionData = p0;
-            else if (parameters.TryGetValue(1, out var p1)) auctionData = p1;
-
-            if (auctionData == null) return;
-
-            var jsonList = ExtractJsonStrings(auctionData);
-            var buyOrders = new List<MarketOffer>();
-            foreach (var json in jsonList)
+            if (parameters.TryGetValue(0, out object? rawJsonObj))
             {
-                if (string.IsNullOrWhiteSpace(json)) continue;
-                try
+                var jsonStr = rawJsonObj as string ?? rawJsonObj?.ToString();
+                if (!string.IsNullOrEmpty(jsonStr))
                 {
-                    var order = JsonSerializer.Deserialize<MarketOffer>(json, JsonOptions);
-                    if (order != null)
+                    var buyOrders = JsonSerializer.Deserialize<List<MarketOffer>>(jsonStr, JsonOptions);
+                    if (buyOrders != null && buyOrders.Count > 0)
                     {
-                        order.Location = LocationResolver.CanonicalCity(_currentLocation);
-                        order.OfferType = "buy_order";
-                        order.CapturedAt = DateTime.UtcNow;
-                        buyOrders.Add(order);
+                        Log.Information("Captured {Count} market buy orders at {Location}", buyOrders.Count, _currentLocation);
+                        OnMarketBuyOrdersReceived?.Invoke(buyOrders);
                     }
                 }
-                catch (Exception ex)
-                {
-                    Log.Debug(ex, "Failed to deserialize market buy order JSON: {Snippet}", json.Length > 100 ? json[..100] : json);
-                }
-            }
-
-            if (buyOrders.Count > 0)
-            {
-                Log.Information("Successfully parsed {Count} marketplace buy orders at {Location}!", buyOrders.Count, _currentLocation);
-                OnMarketBuyOrdersReceived?.Invoke(buyOrders);
             }
         }
         catch (Exception ex)
@@ -214,59 +174,45 @@ public class GameEventHandler
         }
     }
 
-    private static List<string> ExtractJsonStrings(object rawData)
-    {
-        var result = new List<string>();
-        if (rawData is string singleStr)
-        {
-            result.Add(singleStr);
-        }
-        else if (rawData is IEnumerable enumerable)
-        {
-            foreach (var item in enumerable)
-            {
-                if (item is string s && !string.IsNullOrWhiteSpace(s))
-                {
-                    result.Add(s);
-                }
-                else if (item != null)
-                {
-                    var str = item.ToString();
-                    if (!string.IsNullOrWhiteSpace(str) && str.TrimStart().StartsWith('{'))
-                    {
-                        result.Add(str);
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
     private void HandleGrabbedLoot(Dictionary<byte, object> parameters)
     {
         try
         {
-            var loot = new LootEntry { CapturedAt = DateTime.UtcNow };
+            var loot = new LootEntry
+            {
+                CapturedAt = DateTime.UtcNow,
+                CurrentLocation = _currentLocation
+            };
 
-            if (parameters.TryGetValue(1, out object? lootedFrom))
-                loot.LootedFrom = lootedFrom?.ToString() ?? "";
-            if (parameters.TryGetValue(2, out object? looter))
-                loot.LootedBy = looter?.ToString() ?? "";
+            if (parameters.TryGetValue(0, out object? objId))
+                loot.ObjectId = SafeToInt(objId);
+
+            if (parameters.TryGetValue(1, out object? lootedBody))
+                loot.LootedFrom = lootedBody?.ToString() ?? "";
+
+            if (parameters.TryGetValue(2, out object? looterName))
+                loot.LootedBy = looterName?.ToString() ?? "";
+
             if (parameters.TryGetValue(3, out object? isSilver))
                 loot.IsSilver = isSilver is true or 1;
+
             if (parameters.TryGetValue(4, out object? itemIndex))
                 loot.ItemIndex = SafeToInt(itemIndex);
+
             if (parameters.TryGetValue(5, out object? quantity))
             {
-                loot.Quantity = SafeToInt(quantity);
                 if (loot.IsSilver) loot.SilverAmount = SafeToLong(quantity);
+                else loot.Quantity = SafeToInt(quantity);
             }
 
-            OnLootReceived?.Invoke(loot);
+            if (loot.Quantity > 0 || (loot.IsSilver && loot.SilverAmount > 0))
+            {
+                OnLootReceived?.Invoke(loot);
+            }
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Error parsing GrabbedLoot event");
+            Log.Warning(ex, "Error parsing OtherGrabbedLoot event");
         }
     }
 
@@ -274,6 +220,17 @@ public class GameEventHandler
     {
         try
         {
+            // CRITICAL FIX: Only track silver if picked up by local player (or local user was identified)
+            if (parameters.TryGetValue(0, out object? objId))
+            {
+                long entityId = SafeToLong(objId);
+                if (_localUserObjectId != 0 && entityId != _localUserObjectId)
+                {
+                    // Someone else nearby picked up silver; ignore so dashboard doesn't randomly increment!
+                    return;
+                }
+            }
+
             var tx = new SilverTransaction { CapturedAt = DateTime.UtcNow };
 
             if (parameters.TryGetValue(3, out object? yieldPreTax))
@@ -301,23 +258,73 @@ public class GameEventHandler
         }
     }
 
+    private void HandleHealthUpdate(Dictionary<byte, object> parameters)
+    {
+        try
+        {
+            long affectedId = parameters.TryGetValue(0, out var aff) ? SafeToLong(aff) : 0;
+            double healthChange = parameters.TryGetValue(2, out var hc) ? SafeToDouble(hc) : 0;
+            long causerId = parameters.TryGetValue(6, out var cu) ? SafeToLong(cu) : 0;
+            int spellIndex = parameters.TryGetValue(7, out var sp) ? (int)SafeToLong(sp) : 0;
+
+            CombatTracker.Instance.RegisterDamage(affectedId, causerId, healthChange, spellIndex);
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Error parsing HealthUpdate event");
+        }
+    }
+
+    private void HandleHealthUpdates(Dictionary<byte, object> parameters)
+    {
+        try
+        {
+            long affectedId = parameters.TryGetValue(0, out var aff) ? SafeToLong(aff) : 0;
+            var healthChanges = ExtractDoubleList(parameters, 2);
+            var causerIds = ExtractLongList(parameters, 6);
+            var spellIndices = ExtractIntList(parameters, 7);
+
+            int count = Math.Max(healthChanges.Count, causerIds.Count);
+            for (int i = 0; i < count; i++)
+            {
+                double hc = i < healthChanges.Count ? healthChanges[i] : 0;
+                long cu = i < causerIds.Count ? causerIds[i] : 0;
+                int sp = i < spellIndices.Count ? spellIndices[i] : 0;
+                CombatTracker.Instance.RegisterDamage(affectedId, cu, hc, sp);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Error parsing HealthUpdates event");
+        }
+    }
+
     private void HandleJoinResponse(Dictionary<byte, object> parameters)
     {
         try
         {
+            if (parameters.TryGetValue(0, out object? userObjId))
+            {
+                _localUserObjectId = SafeToLong(userObjId);
+            }
+
             if (parameters.TryGetValue(2, out object? username))
             {
                 _playerName = username?.ToString() ?? "";
                 OnPlayerIdentified?.Invoke(_playerName);
-                Log.Information("Player identified: {PlayerName}", _playerName);
+                Log.Information("Player identified: {PlayerName} (ObjectId: {ObjectId})", _playerName, _localUserObjectId);
             }
+
+            CombatTracker.Instance.SetLocalPlayer(_localUserObjectId, _playerName);
 
             if (parameters.TryGetValue(8, out object? mapIndex))
             {
                 var raw = mapIndex?.ToString() ?? "Unknown";
-                _currentLocation = LocationResolver.CanonicalCity(LocationResolver.Resolve(raw));
+                var resolved = WorldDataManager.Instance.Resolve(raw);
+                _currentLocation = resolved.DisplayName;
                 OnLocationChanged?.Invoke(_currentLocation);
-                Log.Information("Location resolved to: {Location} (raw: {Raw})", _currentLocation, raw);
+                OnLocationDetailsChanged?.Invoke(resolved);
+                Log.Information("Location resolved to: {Resolved} (raw: {Raw})", resolved, raw);
             }
         }
         catch (Exception ex)
@@ -333,9 +340,11 @@ public class GameEventHandler
             if (parameters.TryGetValue(0, out object? clusterVal))
             {
                 var raw = clusterVal?.ToString() ?? "";
-                _currentLocation = LocationResolver.CanonicalCity(LocationResolver.Resolve(raw));
+                var resolved = WorldDataManager.Instance.Resolve(raw);
+                _currentLocation = resolved.DisplayName;
                 OnLocationChanged?.Invoke(_currentLocation);
-                Log.Information("Cluster response changed to: {Location} (raw: {Raw})", _currentLocation, raw);
+                OnLocationDetailsChanged?.Invoke(resolved);
+                Log.Information("Cluster response changed to: {Resolved} (raw: {Raw})", resolved, raw);
             }
         }
         catch (Exception ex)
@@ -353,19 +362,19 @@ public class GameEventHandler
     {
         try
         {
-            // Param 2: fameWithZoneMultiplier (scaled by 10,000)
-            if (parameters.TryGetValue(2, out object? fameVal))
+            if (parameters.TryGetValue(2, out object? fameObj))
             {
-                long gained = SafeToLong(fameVal) / 10000;
-                if (gained > 0)
+                long fame = SafeToLong(fameObj);
+                if (fame > 0)
                 {
-                    OnFameReceived?.Invoke(gained);
+                    long displayFame = fame / 10000;
+                    OnFameReceived?.Invoke(displayFame);
                 }
             }
         }
         catch (Exception ex)
         {
-            Log.Debug(ex, "Error parsing UpdateFame event");
+            Log.Warning(ex, "Error parsing UpdateFame event");
         }
     }
 
@@ -373,18 +382,19 @@ public class GameEventHandler
     {
         try
         {
-            if (parameters.TryGetValue(2, out object? reSpecVal))
+            if (parameters.TryGetValue(2, out object? respecObj))
             {
-                long gained = SafeToLong(reSpecVal) / 10000;
-                if (gained > 0)
+                long respec = SafeToLong(respecObj);
+                if (respec > 0)
                 {
-                    OnReSpecReceived?.Invoke(gained);
+                    long displayRespec = respec / 10000;
+                    OnReSpecReceived?.Invoke(displayRespec);
                 }
             }
         }
         catch (Exception ex)
         {
-            Log.Debug(ex, "Error parsing UpdateReSpecPoints event");
+            Log.Warning(ex, "Error parsing UpdateReSpecPoints event");
         }
     }
 
@@ -393,9 +403,9 @@ public class GameEventHandler
         try
         {
             _partyMembers.Clear();
-            if (parameters.TryGetValue(5, out object? namesObj) && namesObj is IEnumerable namesList)
+            if (parameters.TryGetValue(2, out object? membersObj) && membersObj is IEnumerable list)
             {
-                foreach (var item in namesList)
+                foreach (var item in list)
                 {
                     if (item != null && !string.IsNullOrWhiteSpace(item.ToString()))
                     {
@@ -403,6 +413,7 @@ public class GameEventHandler
                     }
                 }
             }
+            CombatTracker.Instance.SetPartyMembers(_partyMembers);
             OnPartyUpdated?.Invoke(new List<string>(_partyMembers));
         }
         catch (Exception ex)
@@ -421,6 +432,7 @@ public class GameEventHandler
                 if (!string.IsNullOrWhiteSpace(name) && !_partyMembers.Contains(name))
                 {
                     _partyMembers.Add(name);
+                    CombatTracker.Instance.SetPartyMembers(_partyMembers);
                     OnPartyUpdated?.Invoke(new List<string>(_partyMembers));
                 }
             }
@@ -441,6 +453,7 @@ public class GameEventHandler
                 if (!string.IsNullOrWhiteSpace(name))
                 {
                     _partyMembers.Remove(name);
+                    CombatTracker.Instance.SetPartyMembers(_partyMembers);
                     OnPartyUpdated?.Invoke(new List<string>(_partyMembers));
                 }
             }
@@ -454,6 +467,7 @@ public class GameEventHandler
     private void HandlePartyDisbanded()
     {
         _partyMembers.Clear();
+        CombatTracker.Instance.SetPartyMembers(_partyMembers);
         OnPartyUpdated?.Invoke(new List<string>());
     }
 
@@ -484,4 +498,73 @@ public class GameEventHandler
         byte[] bytes when bytes.Length >= 4 => BitConverter.ToInt32(bytes, 0),
         _ => 0
     };
+
+    public static double SafeToDouble(object? value) => value switch
+    {
+        double d => d,
+        float f => f,
+        int i => i,
+        long l => l,
+        short s => s,
+        byte b => b,
+        string str when double.TryParse(str, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsed) => parsed,
+        _ => 0.0
+    };
+
+    public static List<double> ExtractDoubleList(Dictionary<byte, object> parameters, byte key)
+    {
+        var result = new List<double>();
+        if (!parameters.TryGetValue(key, out var val) || val == null) return result;
+        if (val is Array arr)
+        {
+            foreach (var item in arr) result.Add(SafeToDouble(item));
+        }
+        else if (val is IEnumerable enumerable && !(val is string))
+        {
+            foreach (var item in enumerable) result.Add(SafeToDouble(item));
+        }
+        else
+        {
+            result.Add(SafeToDouble(val));
+        }
+        return result;
+    }
+
+    public static List<long> ExtractLongList(Dictionary<byte, object> parameters, byte key)
+    {
+        var result = new List<long>();
+        if (!parameters.TryGetValue(key, out var val) || val == null) return result;
+        if (val is Array arr)
+        {
+            foreach (var item in arr) result.Add(SafeToLong(item));
+        }
+        else if (val is IEnumerable enumerable && !(val is string))
+        {
+            foreach (var item in enumerable) result.Add(SafeToLong(item));
+        }
+        else
+        {
+            result.Add(SafeToLong(val));
+        }
+        return result;
+    }
+
+    public static List<int> ExtractIntList(Dictionary<byte, object> parameters, byte key)
+    {
+        var result = new List<int>();
+        if (!parameters.TryGetValue(key, out var val) || val == null) return result;
+        if (val is Array arr)
+        {
+            foreach (var item in arr) result.Add(SafeToInt(item));
+        }
+        else if (val is IEnumerable enumerable && !(val is string))
+        {
+            foreach (var item in enumerable) result.Add(SafeToInt(item));
+        }
+        else
+        {
+            result.Add(SafeToInt(val));
+        }
+        return result;
+    }
 }

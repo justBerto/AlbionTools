@@ -159,9 +159,36 @@ export const PlayerInfoView: React.FC = () => {
         <div className="space-y-6">
           {/* Main Hero Card */}
           <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/30 to-slate-900 border border-amber-500/40 flex items-center justify-center font-bold text-2xl text-amber-300 font-['Outfit'] shadow-xl">
-                {player.Name.charAt(0)}
+            <div className="flex items-center gap-5">
+              {/* Official Layered Avatar & Ring */}
+              <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-slate-900 border-2 border-slate-700/60 flex items-center justify-center shadow-xl">
+                  {player.Avatar ? (
+                    <img
+                      src={`https://www.albiondatabase.com/icons/avatars/${encodeURIComponent(player.Avatar)}.png`}
+                      alt={player.Name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <span className="font-extrabold text-2xl text-amber-300 font-['Outfit']">
+                      {player.Name.charAt(0)}
+                    </span>
+                  )}
+                </div>
+
+                {player.AvatarRing && (
+                  <img
+                    src={`https://www.albiondatabase.com/icons/avatars/${encodeURIComponent(player.AvatarRing)}.png`}
+                    alt="Avatar Ring"
+                    className="absolute inset-0 w-20 h-20 pointer-events-none object-contain scale-125 drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = "none";
+                    }}
+                  />
+                )}
               </div>
 
               <div>
@@ -180,8 +207,10 @@ export const PlayerInfoView: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-400 mt-1 flex items-center gap-4">
+                <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                   <span>Player ID: <strong className="font-mono text-slate-300">{player.Id}</strong></span>
+                  <span>Avatar: <strong className="font-mono text-amber-300">{player.Avatar || "Standard"}</strong></span>
+                  <span>Border: <strong className="font-mono text-amber-300">{player.AvatarRing || "Standard"}</strong></span>
                   <span>Total Kills: <strong className="font-mono text-amber-400">{player.TotalKills}</strong></span>
                   <span>PvP KDR Ratio: <strong className="font-mono text-emerald-400">{player.FameRatio}x</strong></span>
                   <span>Server: <strong className="font-mono text-sky-400">{selectedRegion}</strong></span>

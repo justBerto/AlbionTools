@@ -11,7 +11,7 @@ import { GatheringView } from "./features/gathering/GatheringView";
 import { PartyView } from "./features/party/PartyView";
 import { GuildView } from "./features/guild/GuildView";
 import { StorageView } from "./features/storage/StorageView";
-import { MapHistoryView } from "./features/map-history/MapHistoryView";
+import { MapHistoryView, ZoneHistoryEntry } from "./features/map-history/MapHistoryView";
 import { PlayerInfoView } from "./features/player-info/PlayerInfoView";
 import { LossExplorerView } from "./features/loss-explorer/LossExplorerView";
 import { LoggingView } from "./features/logging/LoggingView";
@@ -132,21 +132,86 @@ export function App() {
   // Live recent loot feed
   const [recentLoot, setRecentLoot] = useState<LootItem[]>([]);
 
+  // Map History State with localStorage persistence
+  const [mapHistory, setMapHistory] = useState<ZoneHistoryEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem("albiontools_map_history");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("albiontools_map_history", JSON.stringify(mapHistory.slice(0, 100)));
+    } catch {}
+  }, [mapHistory]);
+
+  const handleClearMapHistory = () => {
+    setMapHistory([]);
+    localStorage.removeItem("albiontools_map_history");
+  };
+
+  const handleZoneEntered = (zone: { clusterIndex: string; clusterName: string; tier: string; danger: any; enteredAt: string }) => {
+    const enteredTime = new Date(zone.enteredAt).toLocaleTimeString();
+    setMapHistory((prev) => {
+      const updated = [...prev];
+      if (updated.length > 0 && updated[0].duration === "Active") {
+        updated[0] = { ...updated[0], duration: "Visited" };
+      }
+      return [
+        {
+          id: `${Date.now()}-${Math.random()}`,
+          clusterIndex: zone.clusterIndex,
+          clusterName: zone.clusterName,
+          tier: zone.tier,
+          danger: zone.danger || "Blue",
+          enteredAt: enteredTime,
+          duration: "Active",
+          fameGained: 0,
+          silverGained: 0,
+          mobKills: 0,
+        },
+        ...updated,
+      ];
+    });
+  };
+
   // Real-time Sniffer Daemon IPC Bridge
-  useAlbionSocket({
+  const { sendCommand } = useAlbionSocket({
     onGameStatusUpdate: (status) => setGameStatus((prev) => ({ ...prev, ...status, isSnifferActive: true })),
     onSessionStatsUpdate: (stats) => setSessionStats((prev) => ({ ...prev, ...stats })),
     onPartyUpdate: (members) => setPartyMembers(members),
     onLootReceived: (loot) => setRecentLoot((prev) => [loot, ...prev.slice(0, 49)]),
+    onZoneEntered: handleZoneEntered,
   });
+
+  const handleResetSession = () => {
+    setSessionStats({
+      uptimeSeconds: 0,
+      totalFame: 0,
+      famePerHour: 0,
+      totalSilver: 0,
+      silverPerHour: 0,
+      reSpecPoints: 0,
+      reSpecPerHour: 0,
+      might: 0,
+      mightPerHour: 0,
+      favor: 0,
+      favorPerHour: 0,
+    });
+    setRecentLoot([]);
+    sendCommand("RESET_SESSION");
+  };
 
   // Render active tab content
   const renderTabContent = () => {
     switch (currentTab) {
       case "dashboard":
-        return <DashboardView stats={sessionStats} recentLoot={recentLoot} />;
+        return <DashboardView stats={sessionStats} recentLoot={recentLoot} onResetSession={handleResetSession} />;
       case "damage-meter":
-        return <DamageMeterView party={partyMembers} />;
+        return <DamageMeterView party={partyMembers} onResetCombat={() => sendCommand("RESET_COMBAT")} />;
       case "dungeon":
         return <DungeonView />;
       case "item-search":
@@ -164,7 +229,7 @@ export function App() {
       case "storage":
         return <StorageView />;
       case "map-history":
-        return <MapHistoryView />;
+        return <MapHistoryView history={mapHistory} onClearHistory={handleClearMapHistory} />;
       case "player-info":
         return <PlayerInfoView />;
       case "loss-explorer":
@@ -174,7 +239,7 @@ export function App() {
       case "settings":
         return <SettingsView />;
       default:
-        return <DashboardView stats={sessionStats} recentLoot={recentLoot} />;
+        return <DashboardView stats={sessionStats} recentLoot={recentLoot} onResetSession={handleResetSession} />;
     }
   };
 

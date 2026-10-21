@@ -19,6 +19,7 @@ import { SessionStats, LootItem } from "../../types";
 interface DashboardViewProps {
   stats: SessionStats;
   recentLoot: LootItem[];
+  onResetSession?: () => void;
 }
 
 interface FactionOption {
@@ -118,7 +119,7 @@ interface ChestTrackerRow {
   totalLootValue: number;
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot }) => {
+export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot, onResetSession }) => {
   const [activeTab, setActiveTab] = useState<"overview" | "loot" | "combat">("overview");
   const [selectedFaction, setSelectedFaction] = useState<FactionOption>(FACTIONS[0]);
   const [timeRange, setTimeRange] = useState("all-time");
@@ -144,17 +145,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Top Fame Sources data (empty until real fame is logged)
+  // Real tracked fame from network
   const fameSources: ContentRanking[] = stats.totalFame > 0 ? [
-    { content: "Open World Mobs", fame: Math.round(stats.totalFame * 0.55), percentage: 55.0, color: "from-amber-500 to-amber-700" },
-    { content: "Solo Random Dungeons", fame: Math.round(stats.totalFame * 0.30), percentage: 30.0, color: "from-sky-500 to-sky-700" },
-    { content: "The Mists", fame: Math.round(stats.totalFame * 0.15), percentage: 15.0, color: "from-emerald-500 to-emerald-700" },
+    { content: "Combat & Mob Kills (UpdateFame)", fame: stats.totalFame, percentage: 100.0, color: "from-amber-500 to-amber-700" },
   ] : [];
 
-  // Top Silver Sources data (empty until real silver is logged)
+  // Real tracked silver from network (TakeSilver event)
   const silverSources: SilverSourceRanking[] = stats.totalSilver > 0 ? [
-    { source: "Mob Drops", silver: Math.round(stats.totalSilver * 0.60), percentage: 60.0, color: "from-yellow-400 to-yellow-600" },
-    { source: "Looted Chests", silver: Math.round(stats.totalSilver * 0.40), percentage: 40.0, color: "from-amber-400 to-amber-600" },
+    { source: "Mob Drops & Silver (TakeSilver)", silver: stats.totalSilver, percentage: 100.0, color: "from-yellow-400 to-yellow-600" },
   ] : [];
 
   // Looted Chests Matrix across content types (real zero initial state)
@@ -227,8 +225,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {}}
-            className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-slate-100 bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/70 transition-colors"
+            onClick={() => onResetSession?.()}
+            className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-slate-100 bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/70 transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
             <span>Reset Session</span>

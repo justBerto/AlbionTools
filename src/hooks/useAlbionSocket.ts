@@ -7,6 +7,7 @@ interface UseAlbionSocketProps {
   onPartyUpdate?: (party: PartyMember[]) => void;
   onLootReceived?: (loot: LootItem) => void;
   onDungeonEvent?: (event: any) => void;
+  onZoneEntered?: (zone: { clusterIndex: string; clusterName: string; tier: string; danger: any; enteredAt: string }) => void;
 }
 
 export function useAlbionSocket(props: UseAlbionSocketProps = {}) {
@@ -70,6 +71,9 @@ export function useAlbionSocket(props: UseAlbionSocketProps = {}) {
                 break;
               case "DUNGEON_EVENT":
                 propsRef.current.onDungeonEvent?.(payload.data);
+                break;
+              case "ZONE_ENTERED":
+                propsRef.current.onZoneEntered?.(payload.data);
                 break;
               default:
                 break;

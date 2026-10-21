@@ -57,6 +57,8 @@ public class LootEntry
     public int Quantity { get; set; }
     public bool IsSilver { get; set; }
     public long SilverAmount { get; set; }
+    public int ObjectId { get; set; }
+    public string CurrentLocation { get; set; } = "";
     public string LootedFrom { get; set; } = "";
     public string LootedBy { get; set; } = "";
     public DateTime CapturedAt { get; set; } = DateTime.UtcNow;

@@ -1,8 +1,10 @@
-import React, { useState } from "react";
-import { Map, MapPin, Clock, Sparkles, Coins, Skull, ShieldCheck } from "lucide-react";
+import React from "react";
+import { Map, MapPin, Clock, Sparkles, Coins, Skull, ShieldCheck, Trash2, Copy } from "lucide-react";
+import { useToast } from "../../context/ToastContext";
 
-interface ZoneHistoryEntry {
+export interface ZoneHistoryEntry {
   id: string;
+  clusterIndex?: string;
   clusterName: string;
   tier: string;
   danger: "Blue" | "Yellow" | "Red" | "Black" | "Avalon" | "Mists";
@@ -13,8 +15,27 @@ interface ZoneHistoryEntry {
   mobKills: number;
 }
 
-export const MapHistoryView: React.FC = () => {
-  const [history] = useState<ZoneHistoryEntry[]>([]);
+interface MapHistoryViewProps {
+  history: ZoneHistoryEntry[];
+  onClearHistory?: () => void;
+}
+
+export const MapHistoryView: React.FC<MapHistoryViewProps> = ({ history, onClearHistory }) => {
+  const { showToast } = useToast();
+
+  const handleCopyHistory = () => {
+    if (history.length === 0) {
+      showToast("No map history to copy.", "info");
+      return;
+    }
+
+    const lines = history.map((entry, idx) => 
+      `#${idx + 1} | [${entry.tier}] ${entry.clusterName} (${entry.danger} Zone) | Entered: ${entry.enteredAt} | Duration: ${entry.duration} | Fame: +${entry.fameGained} | Silver: +${entry.silverGained}`
+    ).join("\n");
+
+    navigator.clipboard.writeText(`Albion Online Zone Transition History:\n${lines}`);
+    showToast("Map history copied to clipboard!", "success");
+  };
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-80px)]">
@@ -30,8 +51,30 @@ export const MapHistoryView: React.FC = () => {
           </p>
         </div>
 
-        <div className="text-xs text-slate-400 font-mono bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800">
-          Total Zones Visited: <span className="text-amber-400 font-bold">{history.length}</span>
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-slate-400 font-mono bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800">
+            Total Zones Visited: <span className="text-amber-400 font-bold">{history.length}</span>
+          </div>
+
+          <button
+            onClick={handleCopyHistory}
+            className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-slate-100 bg-slate-900 hover:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-800 transition-colors cursor-pointer"
+            title="Copy timeline to clipboard"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            <span>Copy</span>
+          </button>
+
+          {history.length > 0 && onClearHistory && (
+            <button
+              onClick={onClearHistory}
+              className="flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 bg-rose-950/30 hover:bg-rose-950/50 px-3 py-1.5 rounded-xl border border-rose-800/40 transition-colors cursor-pointer"
+              title="Clear map history"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Clear</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -65,6 +108,8 @@ export const MapHistoryView: React.FC = () => {
                       entry.danger === "Black" ? "bg-red-950 text-red-300 border-red-800" :
                       entry.danger === "Avalon" ? "bg-sky-950 text-sky-300 border-sky-800" :
                       entry.danger === "Red" ? "bg-orange-950 text-orange-300 border-orange-800" :
+                      entry.danger === "Yellow" ? "bg-yellow-950 text-yellow-300 border-yellow-800" :
+                      entry.danger === "Mists" ? "bg-purple-950 text-purple-300 border-purple-800" :
                       "bg-blue-950 text-blue-300 border-blue-800"
                     }`}>
                       {entry.tier} • {entry.danger} Zone
@@ -73,20 +118,24 @@ export const MapHistoryView: React.FC = () => {
                   <div className="text-xs text-slate-400 mt-1 flex items-center gap-4 font-mono">
                     <span>Entered: {entry.enteredAt}</span>
                     <span>Duration: {entry.duration}</span>
-                    <span>Mob Kills: {entry.mobKills}</span>
+                    {entry.mobKills > 0 && <span>Mob Kills: {entry.mobKills}</span>}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-6 text-xs font-mono">
-                <div className="text-right">
-                  <span className="text-slate-400 block text-[10px]">Zone Fame</span>
-                  <span className="font-bold text-amber-400 text-sm">+{entry.fameGained.toLocaleString()}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-slate-400 block text-[10px]">Zone Silver</span>
-                  <span className="font-bold text-yellow-400 text-sm">+{entry.silverGained.toLocaleString()}</span>
-                </div>
+                {entry.fameGained > 0 && (
+                  <div className="text-right">
+                    <span className="text-slate-400 block text-[10px]">Zone Fame</span>
+                    <span className="font-bold text-amber-400 text-sm">+{entry.fameGained.toLocaleString()}</span>
+                  </div>
+                )}
+                {entry.silverGained > 0 && (
+                  <div className="text-right">
+                    <span className="text-slate-400 block text-[10px]">Zone Silver</span>
+                    <span className="font-bold text-yellow-400 text-sm">+{entry.silverGained.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
             </div>
           ))
