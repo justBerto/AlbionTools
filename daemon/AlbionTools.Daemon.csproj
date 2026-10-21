@@ -5,15 +5,15 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>AlbionTools.Daemon</RootNamespace>
     <AssemblyName>AlbionTools.Daemon</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Libpcap" Version="0.1.5" />
-    <PackageReference Include="BinaryFormat.EthernetFrame" Version="0.1.5" />
-    <PackageReference Include="BinaryFormat.IPv4" Version="0.1.5" />
-    <PackageReference Include="BinaryFormat.Udp" Version="0.1.5" />
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>
 
 </Project>
