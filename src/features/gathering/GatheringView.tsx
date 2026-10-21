@@ -27,64 +27,10 @@ interface GatheringEntry {
 
 export const GatheringView: React.FC = () => {
   const [selectedProfession, setSelectedProfession] = useState<string>("All");
+  const [timeRange, setTimeRange] = useState<"all" | "session" | "today" | "week">("session");
 
-  const [harvestHistory] = useState<GatheringEntry[]>([
-    {
-      id: "1",
-      resourceType: "Wood",
-      tier: 8,
-      enchantment: 1,
-      amount: 6,
-      bonusAmount: 4,
-      fameGained: 4800,
-      estimatedValue: 45000,
-      timestamp: "10:52:12",
-    },
-    {
-      id: "2",
-      resourceType: "Wood",
-      tier: 7,
-      enchantment: 0,
-      amount: 15,
-      bonusAmount: 8,
-      fameGained: 6750,
-      estimatedValue: 32000,
-      timestamp: "10:48:40",
-    },
-    {
-      id: "3",
-      resourceType: "Fishing",
-      tier: 7,
-      enchantment: 0,
-      amount: 3,
-      bonusAmount: 2,
-      fameGained: 3600,
-      estimatedValue: 28000,
-      timestamp: "10:44:15",
-    },
-    {
-      id: "4",
-      resourceType: "Ore",
-      tier: 6,
-      enchantment: 2,
-      amount: 8,
-      bonusAmount: 5,
-      fameGained: 5200,
-      estimatedValue: 38000,
-      timestamp: "10:39:02",
-    },
-    {
-      id: "5",
-      resourceType: "Fiber",
-      tier: 7,
-      enchantment: 1,
-      amount: 10,
-      bonusAmount: 6,
-      fameGained: 7100,
-      estimatedValue: 41000,
-      timestamp: "10:32:50",
-    },
-  ]);
+  // Empty initial state - populated when resource nodes are harvested
+  const [harvestHistory] = useState<GatheringEntry[]>([]);
 
   const filtered = selectedProfession === "All"
     ? harvestHistory
@@ -97,7 +43,7 @@ export const GatheringView: React.FC = () => {
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-80px)]">
       {/* Top Banner */}
-      <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center justify-between">
+      <div className="glass-panel p-5 rounded-2xl border border-slate-800 flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-100 font-['Outfit'] flex items-center gap-2">
             <img src="/assets/pickaxe.png" alt="Pickaxe" className="w-5 h-5 object-contain" />
@@ -108,9 +54,27 @@ export const GatheringView: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
-          <span className="text-slate-400">Pork Pie Bonus:</span>
-          <span className="font-bold text-emerald-400">+15% Yield Active</span>
+        <div className="flex items-center gap-3">
+          {/* Activity Time Range Filter */}
+          <div className="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-slate-400">Activity:</span>
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value as any)}
+              className="bg-transparent text-slate-200 font-semibold outline-none cursor-pointer"
+            >
+              <option value="session" className="bg-slate-900">Current Session</option>
+              <option value="today" className="bg-slate-900">Today</option>
+              <option value="week" className="bg-slate-900">Past 7 Days</option>
+              <option value="all" className="bg-slate-900">All Time</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
+            <span className="text-slate-400">Pork Pie Bonus:</span>
+            <span className="font-bold text-emerald-400">+15% Yield Active</span>
+          </div>
         </div>
       </div>
 
@@ -197,8 +161,17 @@ export const GatheringView: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-900/80 text-slate-400 font-semibold border-b border-slate-800">
+          {filtered.length === 0 ? (
+            <div className="py-20 text-center text-slate-500 text-xs space-y-2">
+              <Pickaxe className="w-8 h-8 text-slate-600 mx-auto" />
+              <p className="font-semibold text-slate-400">No Gathering Activity Recorded</p>
+              <p className="text-slate-500 max-w-sm mx-auto">
+                Harvest resource nodes (Wood, Ore, Hide, Fiber, Stone) or fish in Albion Online to log yields, gathering fame, and gear bonuses.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-900/80 text-slate-400 font-semibold border-b border-slate-800">
               <tr>
                 <th className="py-2.5 px-3">Resource Type</th>
                 <th className="py-2.5 px-3">Tier</th>
@@ -249,6 +222,7 @@ export const GatheringView: React.FC = () => {
               ))}
             </tbody>
           </table>
+          )}
         </div>
       </div>
     </div>

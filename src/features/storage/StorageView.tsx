@@ -19,15 +19,7 @@ export const StorageView: React.FC = () => {
   const [selectedTier, setSelectedTier] = useState<number | "All">("All");
   const [sortBy, setSortBy] = useState<"value_desc" | "value_asc" | "qty" | "name">("value_desc");
 
-  const [storageItems] = useState<StorageItem[]>([
-    { id: "1", itemId: "T8_MAIN_SWORD", name: "Elder's Broadsword", tier: 8, enchantment: 0, amount: 2, location: "Fort Sterling", tabName: "Tab 1 (Weapons)", estimatedValue: 490000 },
-    { id: "2", itemId: "T8_2H_BOW", name: "Elder's Warbow", tier: 8, enchantment: 2, amount: 1, location: "Lymhurst", tabName: "Tab 2 (Ranged)", estimatedValue: 310000 },
-    { id: "3", itemId: "T7_ARMOR_CLOTH_SET3@1", name: "Cultist Robe 7.1", tier: 7, enchantment: 1, amount: 3, location: "Caerleon", tabName: "Tab 1 (PvP Gear)", estimatedValue: 540000 },
-    { id: "4", itemId: "T8_CLOTH", name: "Elder's Cloth", tier: 8, enchantment: 0, amount: 84, location: "Lymhurst", tabName: "Tab 3 (Materials)", estimatedValue: 714000 },
-    { id: "5", itemId: "T8_BAG@1", name: "Elder's Bag 8.1", tier: 8, enchantment: 1, amount: 4, location: "Brecilien", tabName: "Tab 1 (Chests)", estimatedValue: 480000 },
-    { id: "6", itemId: "T6_POTION_COOLDOWN", name: "Major Energy Potion", tier: 6, enchantment: 0, amount: 40, location: "Fort Sterling", tabName: "Tab 4 (Consumables)", estimatedValue: 248000 },
-    { id: "7", itemId: "T5_BAG", name: "Expert's Bag", tier: 5, enchantment: 0, amount: 15, location: "Bridgewatch", tabName: "Tab 2 (Transport)", estimatedValue: 75000 },
-  ]);
+  const [storageItems] = useState<StorageItem[]>([]);
 
   const filtered = storageItems
     .filter((item) => {
@@ -141,8 +133,17 @@ export const StorageView: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-900/80 text-slate-400 font-semibold border-b border-slate-800">
+          {filtered.length === 0 ? (
+            <div className="py-20 text-center text-slate-500 text-xs space-y-2">
+              <Package className="w-8 h-8 text-slate-600 mx-auto" />
+              <p className="font-semibold text-slate-400">No Storage Vaults Indexed Yet</p>
+              <p className="text-slate-500 max-w-sm mx-auto">
+                Open any city bank vault, personal island chest, or guild territory storage in Albion Online to automatically index and search all items.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-900/80 text-slate-400 font-semibold border-b border-slate-800">
               <tr>
                 <th className="py-2.5 px-3">Item</th>
                 <th className="py-2.5 px-3">Tier</th>
@@ -193,6 +194,7 @@ export const StorageView: React.FC = () => {
               ))}
             </tbody>
           </table>
+          )}
         </div>
       </div>
     </div>

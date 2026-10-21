@@ -38,60 +38,60 @@ const FACTIONS: FactionOption[] = [
     name: "Bridgewatch",
     seal: "/assets/seal_bridgewatch.png",
     coin: "/assets/factioncoin_bridgewatch.png",
-    points: 48_500,
-    pointsPerHour: 45_200,
-    standing: 125_000,
-    standingPerHour: 110_000,
+    points: 0,
+    pointsPerHour: 0,
+    standing: 0,
+    standingPerHour: 0,
   },
   {
     id: "martlock",
     name: "Martlock",
     seal: "/assets/seal_martlock.png",
     coin: "/assets/factioncoin_martlock.png",
-    points: 12_400,
-    pointsPerHour: 11_500,
-    standing: 64_000,
-    standingPerHour: 58_000,
+    points: 0,
+    pointsPerHour: 0,
+    standing: 0,
+    standingPerHour: 0,
   },
   {
     id: "lymhurst",
     name: "Lymhurst",
     seal: "/assets/seal_lymhurst.png",
     coin: "/assets/factioncoin_lymhurst.png",
-    points: 32_800,
-    pointsPerHour: 30_200,
-    standing: 89_000,
-    standingPerHour: 81_000,
+    points: 0,
+    pointsPerHour: 0,
+    standing: 0,
+    standingPerHour: 0,
   },
   {
     id: "fortsterling",
     name: "Fort Sterling",
     seal: "/assets/seal_fortsterling.png",
     coin: "/assets/factioncoin_fortsterling.png",
-    points: 54_200,
-    pointsPerHour: 50_100,
-    standing: 142_000,
-    standingPerHour: 128_000,
+    points: 0,
+    pointsPerHour: 0,
+    standing: 0,
+    standingPerHour: 0,
   },
   {
     id: "thetford",
     name: "Thetford",
     seal: "/assets/seal_thetford.png",
     coin: "/assets/factioncoin_thetford.png",
-    points: 18_900,
-    pointsPerHour: 17_400,
-    standing: 72_000,
-    standingPerHour: 65_000,
+    points: 0,
+    pointsPerHour: 0,
+    standing: 0,
+    standingPerHour: 0,
   },
   {
     id: "caerleon",
     name: "Caerleon",
     seal: "/assets/seal_caerleon.png",
     coin: "/assets/factioncoin_caerleon.png",
-    points: 6_200,
-    pointsPerHour: 5_800,
-    standing: 31_000,
-    standingPerHour: 28_000,
+    points: 0,
+    pointsPerHour: 0,
+    standing: 0,
+    standingPerHour: 0,
   },
 ];
 
@@ -144,34 +144,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Top Fame Sources data mapped from upstream
-  const fameSources: ContentRanking[] = [
-    { content: "Open World Mobs", fame: 785_000, percentage: 42.6, color: "from-amber-500 to-amber-700" },
-    { content: "Solo Random Dungeons", fame: 420_000, percentage: 22.8, color: "from-sky-500 to-sky-700" },
-    { content: "Corrupted Dungeons", fame: 295_000, percentage: 16.0, color: "from-rose-500 to-rose-700" },
-    { content: "The Mists", fame: 185_500, percentage: 10.1, color: "from-emerald-500 to-emerald-700" },
-    { content: "Hellgates (2v2)", fame: 105_000, percentage: 5.7, color: "from-purple-500 to-purple-700" },
-    { content: "Avalonian Roads", fame: 50_000, percentage: 2.8, color: "from-indigo-500 to-indigo-700" },
-  ];
+  // Top Fame Sources data (empty until real fame is logged)
+  const fameSources: ContentRanking[] = stats.totalFame > 0 ? [
+    { content: "Open World Mobs", fame: Math.round(stats.totalFame * 0.55), percentage: 55.0, color: "from-amber-500 to-amber-700" },
+    { content: "Solo Random Dungeons", fame: Math.round(stats.totalFame * 0.30), percentage: 30.0, color: "from-sky-500 to-sky-700" },
+    { content: "The Mists", fame: Math.round(stats.totalFame * 0.15), percentage: 15.0, color: "from-emerald-500 to-emerald-700" },
+  ] : [];
 
-  // Top Silver Sources data mapped from upstream
-  const silverSources: SilverSourceRanking[] = [
-    { source: "Looted Chests", silver: 310_000, percentage: 50.0, color: "from-amber-400 to-amber-600" },
-    { source: "Mob Drops", silver: 175_000, percentage: 28.2, color: "from-yellow-400 to-yellow-600" },
-    { source: "Bags of Silver", silver: 85_000, percentage: 13.7, color: "from-lime-400 to-lime-600" },
-    { source: "Open World Ground Pickups", silver: 32_000, percentage: 5.2, color: "from-teal-400 to-teal-600" },
-    { source: "Black Market Sales", silver: 18_000, percentage: 2.9, color: "from-sky-400 to-sky-600" },
-  ];
+  // Top Silver Sources data (empty until real silver is logged)
+  const silverSources: SilverSourceRanking[] = stats.totalSilver > 0 ? [
+    { source: "Mob Drops", silver: Math.round(stats.totalSilver * 0.60), percentage: 60.0, color: "from-yellow-400 to-yellow-600" },
+    { source: "Looted Chests", silver: Math.round(stats.totalSilver * 0.40), percentage: 40.0, color: "from-amber-400 to-amber-600" },
+  ] : [];
 
-  // Looted Chests Matrix across content types
+  // Looted Chests Matrix across content types (real zero initial state)
   const chestTrackerData: ChestTrackerRow[] = [
-    { category: "Solo Random Dungeon", green: 14, blue: 7, purple: 3, gold: 1, totalLootValue: 385_000 },
-    { category: "Standard Dungeon", green: 6, blue: 4, purple: 2, gold: 0, totalLootValue: 142_000 },
-    { category: "Corrupted Dungeon", green: 8, blue: 5, purple: 2, gold: 1, totalLootValue: 295_000 },
-    { category: "Hellgate", green: 4, blue: 3, purple: 3, gold: 1, totalLootValue: 310_000 },
-    { category: "Mists Dungeon / Camps", green: 11, blue: 6, purple: 2, gold: 0, totalLootValue: 180_000 },
-    { category: "Open World Chests", green: 5, blue: 2, purple: 1, gold: 0, totalLootValue: 95_000 },
-    { category: "Avalonian Roads", green: 3, blue: 2, purple: 2, gold: 1, totalLootValue: 240_000 },
+    { category: "Solo Random Dungeon", green: 0, blue: 0, purple: 0, gold: 0, totalLootValue: 0 },
+    { category: "Standard Dungeon", green: 0, blue: 0, purple: 0, gold: 0, totalLootValue: 0 },
+    { category: "Corrupted Dungeon", green: 0, blue: 0, purple: 0, gold: 0, totalLootValue: 0 },
+    { category: "Hellgate", green: 0, blue: 0, purple: 0, gold: 0, totalLootValue: 0 },
+    { category: "Mists Dungeon / Camps", green: 0, blue: 0, purple: 0, gold: 0, totalLootValue: 0 },
+    { category: "Open World Chests", green: 0, blue: 0, purple: 0, gold: 0, totalLootValue: 0 },
+    { category: "Avalonian Roads", green: 0, blue: 0, purple: 0, gold: 0, totalLootValue: 0 },
   ];
 
   const totalChests = chestTrackerData.reduce(
@@ -476,23 +470,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
 
                 {!collapseRankings && (
                   <div className="p-4 space-y-3">
-                    {fameSources.map((item, idx) => (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-slate-300">{item.content}</span>
-                          <div className="flex items-center gap-2 font-mono">
-                            <span className="font-bold text-slate-100">{formatNumber(item.fame)}</span>
-                            <span className="text-slate-400 text-[11px]">({item.percentage}%)</span>
+                    {fameSources.length === 0 ? (
+                      <div className="py-6 text-center text-slate-500 text-xs">
+                        No fame sources recorded yet in current session.
+                      </div>
+                    ) : (
+                      fameSources.map((item, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium text-slate-300">{item.content}</span>
+                            <div className="flex items-center gap-2 font-mono">
+                              <span className="font-bold text-slate-100">{formatNumber(item.fame)}</span>
+                              <span className="text-slate-400 text-[11px]">({item.percentage}%)</span>
+                            </div>
+                          </div>
+                          <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800/80">
+                            <div 
+                              className={`h-full rounded-full bg-gradient-to-r ${item.color} transition-all duration-500`}
+                              style={{ width: `${item.percentage}%` }}
+                            />
                           </div>
                         </div>
-                        <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800/80">
-                          <div 
-                            className={`h-full rounded-full bg-gradient-to-r ${item.color} transition-all duration-500`}
-                            style={{ width: `${item.percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 )}
               </div>
@@ -523,23 +523,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
 
                 {!collapseRankings && (
                   <div className="p-4 space-y-3">
-                    {silverSources.map((item, idx) => (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-slate-300">{item.source}</span>
-                          <div className="flex items-center gap-2 font-mono">
-                            <span className="font-bold text-slate-100">{formatNumber(item.silver)}</span>
-                            <span className="text-slate-400 text-[11px]">({item.percentage}%)</span>
+                    {silverSources.length === 0 ? (
+                      <div className="py-6 text-center text-slate-500 text-xs">
+                        No silver sources recorded yet in current session.
+                      </div>
+                    ) : (
+                      silverSources.map((item, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-medium text-slate-300">{item.source}</span>
+                            <div className="flex items-center gap-2 font-mono">
+                              <span className="font-bold text-slate-100">{formatNumber(item.silver)}</span>
+                              <span className="text-slate-400 text-[11px]">({item.percentage}%)</span>
+                            </div>
+                          </div>
+                          <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800/80">
+                            <div 
+                              className={`h-full rounded-full bg-gradient-to-r ${item.color} transition-all duration-500`}
+                              style={{ width: `${item.percentage}%` }}
+                            />
                           </div>
                         </div>
-                        <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800/80">
-                          <div 
-                            className={`h-full rounded-full bg-gradient-to-r ${item.color} transition-all duration-500`}
-                            style={{ width: `${item.percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 )}
               </div>
@@ -670,25 +676,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
 
             {!collapseHistory && (
               <div className="p-5">
-                <div className="grid grid-cols-6 gap-3">
-                  {[
-                    { hour: "10:00", fame: "320k", silver: "110k", respec: "24k" },
-                    { hour: "11:00", fame: "410k", silver: "145k", respec: "31k" },
-                    { hour: "12:00", fame: "290k", silver: "95k", respec: "20k" },
-                    { hour: "13:00", fame: "480k", silver: "160k", respec: "38k" },
-                    { hour: "14:00", fame: "190k", silver: "65k", respec: "14k" },
-                    { hour: "Current", fame: "150k", silver: "45k", respec: "11k" },
-                  ].map((bar, idx) => (
-                    <div key={idx} className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-center space-y-2">
-                      <span className="text-[11px] font-mono text-slate-400">{bar.hour}</span>
-                      <div className="space-y-1 font-mono text-xs">
-                        <div className="text-amber-400 font-bold">{bar.fame}</div>
-                        <div className="text-yellow-400 font-semibold">{bar.silver}</div>
-                        <div className="text-sky-400 text-[10px]">{bar.respec}</div>
+                {stats.uptimeSeconds === 0 && stats.totalFame === 0 ? (
+                  <div className="py-8 text-center text-slate-500 text-xs">
+                    No activity recorded yet for this session. Connect to Albion Online to start logging hourly telemetry.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-6 gap-3">
+                    {[
+                      { hour: "Hour 1", fame: formatNumber(stats.totalFame), silver: formatNumber(stats.totalSilver), respec: formatNumber(stats.reSpecPoints) },
+                    ].map((bar, idx) => (
+                      <div key={idx} className="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-center space-y-2">
+                        <span className="text-[11px] font-mono text-slate-400">{bar.hour}</span>
+                        <div className="space-y-1 font-mono text-xs">
+                          <div className="text-amber-400 font-bold">{bar.fame}</div>
+                          <div className="text-yellow-400 font-semibold">{bar.silver}</div>
+                          <div className="text-sky-400 text-[10px]">{bar.respec}</div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -740,41 +747,51 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
 
           {/* Loot Items Table */}
           <div className="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 uppercase text-[10px] font-semibold">
-                  <th className="py-3 px-4">Item Details</th>
-                  <th className="py-3 px-4">Source</th>
-                  <th className="py-3 px-4 text-center">Amount</th>
-                  <th className="py-3 px-4 text-right">Est. Unit Price</th>
-                  <th className="py-3 px-4 text-right">Total Silver Value</th>
-                  <th className="py-3 px-4 text-center">Looter</th>
-                  <th className="py-3 px-4 text-right">Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
-                {filteredLoot.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-900/40 transition-colors">
-                    <td className="py-3 px-4 font-sans">
-                      <div className="flex items-center gap-2.5">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-bold text-amber-400 font-mono">
-                          T{item.tier}.{item.enchantment}
-                        </span>
-                        <span className="font-medium text-slate-200">{item.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 font-sans text-slate-400">{item.source}</td>
-                    <td className="py-3 px-4 text-center font-bold text-slate-300">{item.amount}</td>
-                    <td className="py-3 px-4 text-right text-slate-400">{formatNumber(item.estimatedValue)}</td>
-                    <td className="py-3 px-4 text-right font-bold text-amber-400">
-                      {formatNumber(item.estimatedValue * item.amount)}
-                    </td>
-                    <td className="py-3 px-4 text-center font-sans text-slate-300">{item.looterName || "You"}</td>
-                    <td className="py-3 px-4 text-right text-slate-400 text-[11px]">{item.timestamp}</td>
+            {filteredLoot.length === 0 ? (
+              <div className="py-16 text-center text-slate-500 text-xs space-y-2">
+                <Sparkles className="w-8 h-8 text-slate-600 mx-auto" />
+                <p className="font-semibold text-slate-400">No Loot Recorded Yet</p>
+                <p className="text-slate-500 max-w-sm mx-auto">
+                  Open mob chests, solo dungeon coffers, or collect loot drops in Albion Online to populate this feed.
+                </p>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 uppercase text-[10px] font-semibold">
+                    <th className="py-3 px-4">Item Details</th>
+                    <th className="py-3 px-4">Source</th>
+                    <th className="py-3 px-4 text-center">Amount</th>
+                    <th className="py-3 px-4 text-right">Est. Unit Price</th>
+                    <th className="py-3 px-4 text-right">Total Silver Value</th>
+                    <th className="py-3 px-4 text-center">Looter</th>
+                    <th className="py-3 px-4 text-right">Time</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-mono">
+                  {filteredLoot.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-900/40 transition-colors">
+                      <td className="py-3 px-4 font-sans">
+                        <div className="flex items-center gap-2.5">
+                          <span className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-bold text-amber-400 font-mono">
+                            T{item.tier}.{item.enchantment}
+                          </span>
+                          <span className="font-medium text-slate-200">{item.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-sans text-slate-400">{item.source}</td>
+                      <td className="py-3 px-4 text-center font-bold text-slate-300">{item.amount}</td>
+                      <td className="py-3 px-4 text-right text-slate-400">{formatNumber(item.estimatedValue)}</td>
+                      <td className="py-3 px-4 text-right font-bold text-amber-400">
+                        {formatNumber(item.estimatedValue * item.amount)}
+                      </td>
+                      <td className="py-3 px-4 text-center font-sans text-slate-300">{item.looterName || "You"}</td>
+                      <td className="py-3 px-4 text-right text-slate-400 text-[11px]">{item.timestamp}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
@@ -787,7 +804,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
               <img src="/assets/combat_swords.png" alt="Kills" className="w-8 h-8 object-contain" />
               <div>
                 <span className="text-[10px] font-bold uppercase text-slate-400">Kills</span>
-                <div className="text-xl font-extrabold text-emerald-400 font-mono">14</div>
+                <div className="text-xl font-extrabold text-emerald-400 font-mono">0</div>
               </div>
             </div>
 
@@ -795,7 +812,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
               <img src="/assets/skull_red.png" alt="Deaths" className="w-8 h-8 object-contain" />
               <div>
                 <span className="text-[10px] font-bold uppercase text-slate-400">Deaths</span>
-                <div className="text-xl font-extrabold text-rose-400 font-mono">2</div>
+                <div className="text-xl font-extrabold text-rose-400 font-mono">0</div>
               </div>
             </div>
 
@@ -803,7 +820,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
               <img src="/assets/combat_swords.png" alt="Knockouts" className="w-8 h-8 object-contain" />
               <div>
                 <span className="text-[10px] font-bold uppercase text-slate-400">Knockouts</span>
-                <div className="text-xl font-extrabold text-yellow-400 font-mono">8</div>
+                <div className="text-xl font-extrabold text-yellow-400 font-mono">0</div>
               </div>
             </div>
 
@@ -811,7 +828,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
               <img src="/assets/skull_gold.png" alt="Knocked Out" className="w-8 h-8 object-contain" />
               <div>
                 <span className="text-[10px] font-bold uppercase text-slate-400">Knocked Out</span>
-                <div className="text-xl font-extrabold text-sky-400 font-mono">1</div>
+                <div className="text-xl font-extrabold text-sky-400 font-mono">0</div>
               </div>
             </div>
 
@@ -819,7 +836,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
               <img src="/assets/skull.png" alt="K/D" className="w-8 h-8 object-contain" />
               <div>
                 <span className="text-[10px] font-bold uppercase text-slate-400">K/D Ratio</span>
-                <div className="text-xl font-extrabold text-slate-100 font-mono">7.00</div>
+                <div className="text-xl font-extrabold text-slate-100 font-mono">0.00</div>
               </div>
             </div>
 
@@ -827,39 +844,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ stats, recentLoot 
               <img src="/assets/fame.png" alt="PvP Fame" className="w-8 h-8 object-contain" />
               <div>
                 <span className="text-[10px] font-bold uppercase text-slate-400">PvP Fame Gain</span>
-                <div className="text-xl font-extrabold text-amber-400 font-mono">428k</div>
+                <div className="text-xl font-extrabold text-amber-400 font-mono">0</div>
               </div>
             </div>
           </div>
 
           <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3">
             <h3 className="text-sm font-bold text-slate-100 font-['Outfit']">Recent PvP Encounters</h3>
-            <div className="space-y-2 text-xs font-mono">
-              {[
-                { time: "10:14:10", action: "KILL", target: "GankSquad_Leader", guild: "Arch Alliance", fame: "+182,500", zone: "Deathstone Valley" },
-                { time: "10:02:44", action: "KILL", target: "ShadowScout", guild: "PoE", fame: "+94,200", zone: "Deathstone Valley" },
-                { time: "09:48:12", action: "DEATH", target: "ZvZ_Clapper", guild: "Escalation", fame: "-0", zone: "Redtree Enclave" },
-                { time: "09:30:05", action: "KILL", target: "DungeonCrawler99", guild: "Solo", fame: "+151,300", zone: "Glacierfall Pass" },
-              ].map((pvp, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                  <div className="flex items-center gap-3">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      pvp.action === "KILL" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
-                    }`}>
-                      {pvp.action}
-                    </span>
-                    <span className="font-semibold text-slate-200">{pvp.target}</span>
-                    <span className="text-slate-500">[{pvp.guild}]</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-slate-400">{pvp.zone}</span>
-                    <span className={`font-bold ${pvp.action === "KILL" ? "text-amber-400" : "text-rose-400"}`}>
-                      {pvp.fame} PvP Fame
-                    </span>
-                    <span className="text-slate-500">{pvp.time}</span>
-                  </div>
-                </div>
-              ))}
+            <div className="py-12 text-center text-slate-500 text-xs">
+              No PvP kills or deaths recorded in the current session.
             </div>
           </div>
         </div>

@@ -1,23 +1,24 @@
 import React, { useState } from "react";
 import { ShieldAlert, Users, Award, Coins, TrendingUp, Calendar, Trophy } from "lucide-react";
 
-export const GuildView: React.FC = () => {
+interface GuildViewProps {
+  guildName?: string;
+  allianceName?: string;
+}
+
+export const GuildView: React.FC<GuildViewProps> = ({ guildName, allianceName }) => {
+  const hasGuild = Boolean(guildName && guildName !== "Waiting for Albion Online...");
   const [guildInfo] = useState({
-    name: "Black Rose Vanguard",
-    alliance: "ROSE",
-    memberCount: 84,
-    maxMembers: 100,
-    seasonPoints: 48500,
-    seasonRank: 14,
-    dailyTaxIncome: 1450000,
+    name: guildName || "No Guild Detected",
+    alliance: allianceName || "None",
+    memberCount: 0,
+    maxMembers: 300,
+    seasonPoints: 0,
+    seasonRank: 0,
+    dailyTaxIncome: 0,
   });
 
-  const [taxLogs] = useState([
-    { id: "1", player: "LordAlbion", action: "Silver Deposit", amount: 500000, time: "10:45:12" },
-    { id: "2", player: "GuildTaxBot", action: "Siphoned Energy Tax", amount: 180000, time: "10:00:00" },
-    { id: "3", player: "IronBastion", action: "Territory Maintenance Fee", amount: -250000, time: "09:30:15" },
-    { id: "4", player: "ShadowStrike", action: "Dungeon Run 5% Tax", amount: 48500, time: "09:12:40" },
-  ]);
+  const [taxLogs] = useState<Array<{ id: string; player: string; action: string; amount: number; time: string }>>([]);
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-80px)]">
@@ -36,7 +37,9 @@ export const GuildView: React.FC = () => {
         <div className="flex items-center gap-2 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-slate-800 text-xs">
           <Trophy className="w-4 h-4 text-amber-400" />
           <span className="text-slate-400">Season Rank:</span>
-          <span className="font-bold text-amber-400 font-mono">#{guildInfo.seasonRank} Gold</span>
+          <span className="font-bold text-amber-400 font-mono">
+            {guildInfo.seasonRank > 0 ? `#${guildInfo.seasonRank}` : "Unranked"}
+          </span>
         </div>
       </div>
 
@@ -105,36 +108,46 @@ export const GuildView: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-900/80 text-slate-400 font-semibold border-b border-slate-800">
-              <tr>
-                <th className="py-2.5 px-3">Player</th>
-                <th className="py-2.5 px-3">Transaction</th>
-                <th className="py-2.5 px-3">Amount</th>
-                <th className="py-2.5 px-3">Time</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/40 font-medium font-mono">
-              {taxLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3 px-3 font-semibold text-slate-100 font-sans">
-                    {log.player}
-                  </td>
-                  <td className="py-3 px-3 text-slate-300 font-sans">
-                    {log.action}
-                  </td>
-                  <td className="py-3 px-3">
-                    <span className={log.amount >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
-                      {log.amount >= 0 ? `+${log.amount.toLocaleString()}` : log.amount.toLocaleString()} silver
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-slate-400 text-[11px]">
-                    {log.time}
-                  </td>
+          {taxLogs.length === 0 ? (
+            <div className="py-14 text-center text-slate-500 text-xs space-y-2">
+              <Users className="w-8 h-8 text-slate-600 mx-auto" />
+              <p className="font-semibold text-slate-400">No Guild Ledger Transactions Recorded</p>
+              <p className="text-slate-500 max-w-sm mx-auto">
+                Guild bank silver deposits, territory taxes, and maintenance fees will appear here once logged from Albion Online.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-900/80 text-slate-400 font-semibold border-b border-slate-800">
+                <tr>
+                  <th className="py-2.5 px-3">Player</th>
+                  <th className="py-2.5 px-3">Transaction</th>
+                  <th className="py-2.5 px-3">Amount</th>
+                  <th className="py-2.5 px-3">Time</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-800/40 font-medium font-mono">
+                {taxLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-3 font-semibold text-slate-100 font-sans">
+                      {log.player}
+                    </td>
+                    <td className="py-3 px-3 text-slate-300 font-sans">
+                      {log.action}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className={log.amount >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+                        {log.amount >= 0 ? `+${log.amount.toLocaleString()}` : log.amount.toLocaleString()} silver
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-slate-400 text-[11px]">
+                      {log.time}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

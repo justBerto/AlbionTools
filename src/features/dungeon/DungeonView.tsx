@@ -50,8 +50,8 @@ export const DungeonView: React.FC = () => {
   const [isTrackingActive, setIsTrackingActive] = useState(true);
 
   // 90s Entrance Safe Timer (for Solo Dungeons)
-  const [timerRemaining, setTimerRemaining] = useState(64);
-  const [timerActive, setTimerActive] = useState(true);
+  const [timerRemaining, setTimerRemaining] = useState(90);
+  const [timerActive, setTimerActive] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   useEffect(() => {
@@ -103,105 +103,8 @@ export const DungeonView: React.FC = () => {
     return `${mins}m ${secs.toString().padStart(2, "0")}s`;
   };
 
-  // Upstream-style Dungeon Runs Database
-  const [runs, setRuns] = useState<DungeonRun[]>([
-    {
-      id: "DUNG-104",
-      type: "Solo Random Dungeon",
-      tier: 8,
-      enchantment: 1,
-      mapName: "Deathstone Valley",
-      startTime: "12:45:10",
-      durationSeconds: 780, // 13m 00s
-      fame: 420_000,
-      respec: 35_000,
-      silver: 145_000,
-      lootValue: 385_000,
-      chests: { green: 2, blue: 2, purple: 1, gold: 1 },
-      deaths: 0,
-      status: "Completed",
-    },
-    {
-      id: "DUNG-103",
-      type: "Corrupted Dungeon",
-      tier: 7,
-      enchantment: 0,
-      mapName: "Hunter Tier Corrupted",
-      startTime: "11:50:20",
-      durationSeconds: 540, // 9m 00s
-      fame: 295_000,
-      respec: 22_000,
-      silver: 85_000,
-      lootValue: 195_000,
-      chests: { green: 1, blue: 2, purple: 1, gold: 0 },
-      deaths: 0,
-      status: "Completed",
-    },
-    {
-      id: "DUNG-102",
-      type: "Solo Random Dungeon",
-      tier: 7,
-      enchantment: 0,
-      mapName: "Deathstone Valley",
-      startTime: "11:15:05",
-      durationSeconds: 610, // 10m 10s
-      fame: 310_000,
-      respec: 25_000,
-      silver: 110_000,
-      lootValue: 180_000,
-      chests: { green: 3, blue: 1, purple: 0, gold: 0 },
-      deaths: 0,
-      status: "Completed",
-    },
-    {
-      id: "DUNG-101",
-      type: "Hellgate",
-      tier: 8,
-      enchantment: 0,
-      mapName: "Lethal Hellgate (2v2)",
-      startTime: "10:30:40",
-      durationSeconds: 480, // 8m 00s
-      fame: 180_000,
-      respec: 18_000,
-      silver: 95_000,
-      lootValue: 310_000,
-      chests: { green: 0, blue: 1, purple: 2, gold: 1 },
-      deaths: 1,
-      status: "Completed",
-    },
-    {
-      id: "DUNG-100",
-      type: "Mists Dungeon",
-      tier: 6,
-      enchantment: 2,
-      mapName: "Greater Mists Enclave",
-      startTime: "09:40:15",
-      durationSeconds: 710, // 11m 50s
-      fame: 245_000,
-      respec: 20_000,
-      silver: 75_000,
-      lootValue: 165_000,
-      chests: { green: 2, blue: 2, purple: 1, gold: 0 },
-      deaths: 0,
-      status: "Completed",
-    },
-    {
-      id: "DUNG-099",
-      type: "Abyssal Depths",
-      tier: 7,
-      enchantment: 1,
-      mapName: "Sunken Abyss",
-      startTime: "08:55:00",
-      durationSeconds: 840, // 14m 00s
-      fame: 390_000,
-      respec: 31_000,
-      silver: 130_000,
-      lootValue: 270_000,
-      chests: { green: 1, blue: 3, purple: 1, gold: 0 },
-      deaths: 0,
-      status: "Completed",
-    },
-  ]);
+  // Upstream-style Dungeon Runs Database (empty initial state)
+  const [runs, setRuns] = useState<DungeonRun[]>([]);
 
   // Filter runs according to selected tab, tiers, and enchantments
   const filteredRuns = runs.filter((r) => {
@@ -691,67 +594,77 @@ export const DungeonView: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/40 text-slate-400 uppercase text-[10px] font-semibold">
-                <th className="py-2.5 px-4">Run # & Type</th>
-                <th className="py-2.5 px-3">Tier</th>
-                <th className="py-2.5 px-3">Zone / Map</th>
-                <th className="py-2.5 px-3">Duration</th>
-                <th className="py-2.5 px-3 text-right">Fame Earned</th>
-                <th className="py-2.5 px-3 text-right">Silver</th>
-                <th className="py-2.5 px-3 text-right">Loot Value</th>
-                <th className="py-2.5 px-3 text-center">Chests Looted</th>
-                <th className="py-2.5 px-3 text-center">Deaths</th>
-                <th className="py-2.5 px-4 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 font-mono">
-              {filteredRuns.map((run) => (
-                <tr key={run.id} className="hover:bg-slate-900/50 transition-colors">
-                  <td className="py-3 px-4 font-sans">
-                    <div className="font-semibold text-slate-200 flex items-center gap-2">
-                      <span className="text-slate-400 font-mono text-[11px]">{run.id}</span>
-                      <span>{run.type}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-500">{run.startTime}</div>
-                  </td>
-                  <td className="py-3 px-3">
-                    <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-400 font-bold">
-                      T{run.tier}.{run.enchantment}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 font-sans text-slate-300">{run.mapName}</td>
-                  <td className="py-3 px-3 text-slate-300">{formatDuration(run.durationSeconds)}</td>
-                  <td className="py-3 px-3 text-right text-amber-400 font-bold">
-                    +{formatNumber(run.fame)}
-                  </td>
-                  <td className="py-3 px-3 text-right text-yellow-400 font-bold">
-                    +{formatNumber(run.silver)}
-                  </td>
-                  <td className="py-3 px-3 text-right text-slate-100 font-bold">
-                    {formatNumber(run.lootValue)}
-                  </td>
-                  <td className="py-3 px-3 text-center">
-                    <div className="flex items-center justify-center gap-1.5 text-[11px]">
-                      {run.chests.green > 0 && <span className="text-emerald-400">{run.chests.green}G</span>}
-                      {run.chests.blue > 0 && <span className="text-sky-400">{run.chests.blue}B</span>}
-                      {run.chests.purple > 0 && <span className="text-purple-400">{run.chests.purple}P</span>}
-                      {run.chests.gold > 0 && <span className="text-amber-400 font-bold">{run.chests.gold}L</span>}
-                    </div>
-                  </td>
-                  <td className={`py-3 px-3 text-center ${run.deaths > 0 ? "text-rose-400 font-bold" : "text-slate-500"}`}>
-                    {run.deaths}
-                  </td>
-                  <td className="py-3 px-4 text-right font-sans">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                      {run.status}
-                    </span>
-                  </td>
+          {filteredRuns.length === 0 ? (
+            <div className="py-20 text-center text-slate-500 text-xs space-y-2">
+              <Layers className="w-8 h-8 text-slate-600 mx-auto" />
+              <p className="font-semibold text-slate-400">No Recorded Dungeon Runs</p>
+              <p className="text-slate-500 max-w-sm mx-auto">
+                Enter a Solo Random Dungeon, Corrupted Dungeon, Hellgate, or Group Dungeon in Albion Online. Time, fame, loot, and chest drops will be tracked automatically.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-900/40 text-slate-400 uppercase text-[10px] font-semibold">
+                  <th className="py-2.5 px-4">Run # & Type</th>
+                  <th className="py-2.5 px-3">Tier</th>
+                  <th className="py-2.5 px-3">Zone / Map</th>
+                  <th className="py-2.5 px-3">Duration</th>
+                  <th className="py-2.5 px-3 text-right">Fame Earned</th>
+                  <th className="py-2.5 px-3 text-right">Silver</th>
+                  <th className="py-2.5 px-3 text-right">Loot Value</th>
+                  <th className="py-2.5 px-3 text-center">Chests Looted</th>
+                  <th className="py-2.5 px-3 text-center">Deaths</th>
+                  <th className="py-2.5 px-4 text-right">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-mono">
+                {filteredRuns.map((run) => (
+                  <tr key={run.id} className="hover:bg-slate-900/50 transition-colors">
+                    <td className="py-3 px-4 font-sans">
+                      <div className="font-semibold text-slate-200 flex items-center gap-2">
+                        <span className="text-slate-400 font-mono text-[11px]">{run.id}</span>
+                        <span>{run.type}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500">{run.startTime}</div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-amber-400 font-bold">
+                        T{run.tier}.{run.enchantment}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 font-sans text-slate-300">{run.mapName}</td>
+                    <td className="py-3 px-3 text-slate-300">{formatDuration(run.durationSeconds)}</td>
+                    <td className="py-3 px-3 text-right text-amber-400 font-bold">
+                      +{formatNumber(run.fame)}
+                    </td>
+                    <td className="py-3 px-3 text-right text-yellow-400 font-bold">
+                      +{formatNumber(run.silver)}
+                    </td>
+                    <td className="py-3 px-3 text-right text-slate-100 font-bold">
+                      {formatNumber(run.lootValue)}
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <div className="flex items-center justify-center gap-1.5 text-[11px]">
+                        {run.chests.green > 0 && <span className="text-emerald-400">{run.chests.green}G</span>}
+                        {run.chests.blue > 0 && <span className="text-sky-400">{run.chests.blue}B</span>}
+                        {run.chests.purple > 0 && <span className="text-purple-400">{run.chests.purple}P</span>}
+                        {run.chests.gold > 0 && <span className="text-amber-400 font-bold">{run.chests.gold}L</span>}
+                      </div>
+                    </td>
+                    <td className={`py-3 px-3 text-center ${run.deaths > 0 ? "text-rose-400 font-bold" : "text-slate-500"}`}>
+                      {run.deaths}
+                    </td>
+                    <td className="py-3 px-4 text-right font-sans">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                        {run.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

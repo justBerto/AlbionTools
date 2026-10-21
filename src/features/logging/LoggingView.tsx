@@ -17,13 +17,7 @@ export const LoggingView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
 
-  const [logs, setLogs] = useState<LogEntry[]>([
-    { id: "1", type: "LOOT", eventCode: 65, message: "NewEquipmentItem: Elder's Broadsword (T8.0) dropped from Chest", timestamp: "11:02:14.280", payload: { objectId: 657, itemId: 2036, amount: 1, quality: 1, marketVal: 245000 } },
-    { id: "2", type: "COMBAT", eventCode: 11, message: "HealthUpdate: LordAlbion hit Mob (ID: 3405) with Heroic Strike for -1845 dmg", timestamp: "11:02:10.150", payload: { causerId: 101, affectedId: 3405, healthChange: -1845, spell: "Heroic Strike" } },
-    { id: "3", type: "NETWORK", eventCode: 252, message: "PhotonFragmentAssembly: Reassembled 4 fragmented UDP packets successfully", timestamp: "11:02:08.010", payload: { totalBytes: 4120, channel: 0, sequence: 1420 } },
-    { id: "4", type: "MARKET", eventCode: 253, message: "AuctionGetOffers: Fetched 50 market orders from Lymhurst Marketplace", timestamp: "11:01:45.890", payload: { location: "Lymhurst", count: 50 } },
-    { id: "5", type: "SYSTEM", message: "AlbionTools Sniffer connected to Npcap Adapter (Ethernet)", timestamp: "11:00:00.000", payload: { adapter: "\\Device\\NPF_{1234}", speed: "1000Mbps" } },
-  ]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
 
   const filteredLogs = logs.filter((log) => {
     const matchesType = filterType === "ALL" || log.type === filterType;
@@ -91,32 +85,46 @@ export const LoggingView: React.FC = () => {
       {/* Main Terminal View */}
       <div className="grid grid-cols-3 gap-6 font-mono text-xs">
         {/* Logs Feed (2 Cols) */}
-        <div className="col-span-2 glass-panel p-4 rounded-2xl border border-slate-800 space-y-2 max-h-[500px] overflow-y-auto">
-          {filteredLogs.map((log) => (
-            <div
-              key={log.id}
-              onClick={() => setSelectedLog(log)}
-              className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                selectedLog?.id === log.id
-                  ? 'border-amber-500/80 bg-amber-500/10'
-                  : 'border-slate-800/80 bg-slate-950/60 hover:border-slate-700'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                  log.type === "COMBAT" ? "bg-rose-950 text-rose-300 border border-rose-800" :
-                  log.type === "LOOT" ? "bg-amber-950 text-amber-300 border border-amber-800" :
-                  log.type === "NETWORK" ? "bg-sky-950 text-sky-300 border border-sky-800" :
-                  log.type === "MARKET" ? "bg-emerald-950 text-emerald-300 border border-emerald-800" :
-                  "bg-slate-800 text-slate-300"
-                }`}>
-                  {log.type}
-                </span>
-                <span className="text-slate-200 truncate max-w-md font-sans">{log.message}</span>
+        <div className="col-span-2 glass-panel p-4 rounded-2xl border border-slate-800 space-y-2 min-h-[360px] max-h-[500px] overflow-y-auto">
+          {filteredLogs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-center p-8 space-y-3 font-sans">
+              <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600">
+                <Terminal className="w-6 h-6 text-slate-500" />
               </div>
-              <span className="text-[10px] text-slate-500 shrink-0">{log.timestamp}</span>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-slate-300">No Network Packets Captured Yet</p>
+                <p className="text-xs text-slate-500 max-w-sm">
+                  Packet sniffer is listening. When Albion Online is running, parsed Photon events (combat, loot, auctions, and zone transitions) will stream here in real-time.
+                </p>
+              </div>
             </div>
-          ))}
+          ) : (
+            filteredLogs.map((log) => (
+              <div
+                key={log.id}
+                onClick={() => setSelectedLog(log)}
+                className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                  selectedLog?.id === log.id
+                    ? 'border-amber-500/80 bg-amber-500/10'
+                    : 'border-slate-800/80 bg-slate-950/60 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                    log.type === "COMBAT" ? "bg-rose-950 text-rose-300 border border-rose-800" :
+                    log.type === "LOOT" ? "bg-amber-950 text-amber-300 border border-amber-800" :
+                    log.type === "NETWORK" ? "bg-sky-950 text-sky-300 border border-sky-800" :
+                    log.type === "MARKET" ? "bg-emerald-950 text-emerald-300 border border-emerald-800" :
+                    "bg-slate-800 text-slate-300"
+                  }`}>
+                    {log.type}
+                  </span>
+                  <span className="text-slate-200 truncate max-w-md font-sans">{log.message}</span>
+                </div>
+                <span className="text-[10px] text-slate-500 shrink-0">{log.timestamp}</span>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Selected Log JSON Details (1 Col) */}

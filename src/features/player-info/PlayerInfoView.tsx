@@ -13,105 +13,56 @@ import {
   Pickaxe,
   Hammer
 } from "lucide-react";
-import { searchAlbionPlayer, PlayerSearchResult, KillEvent } from "../../services/albionGameInfoApi";
+import { 
+  searchAlbionPlayer, 
+  getPlayerDetails, 
+  getPlayerKills, 
+  PlayerSearchResult, 
+  KillEvent 
+} from "../../services/albionGameInfoApi";
 import { useToast } from "../../context/ToastContext";
 
 export const PlayerInfoView: React.FC = () => {
   const { showToast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("LordAlbion");
-  const [selectedRegion, setSelectedRegion] = useState<"Europe" | "Americas" | "Asia">("Europe");
+
+  const getInitialRegion = (): "Europe" | "Americas" | "Asia" => {
+    const saved = localStorage.getItem("albiontools_server");
+    if (saved?.includes("Asia")) return "Asia";
+    if (saved?.includes("Europe")) return "Europe";
+    return "Americas";
+  };
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState<"Europe" | "Americas" | "Asia">(getInitialRegion);
   const [activeTab, setActiveTab] = useState<"overview" | "kills">("overview");
   const [isLoading, setIsLoading] = useState(false);
-  const [player, setPlayer] = useState<PlayerSearchResult>({
-    Id: "p_101",
-    Name: "LordAlbion",
-    GuildName: "Black Rose Vanguard",
-    AllianceName: "ROSE",
-    KillFame: 48_500_000,
-    DeathFame: 12_200_000,
-    FameRatio: 3.97,
-    TotalKills: 1420,
-    PvE: {
-      Total: 185_000_000,
-      Royal: 25_000_000,
-      Outlands: 98_000_000,
-      Avalon: 34_000_000,
-      Hellgate: 12_000_000,
-      CorruptedDungeon: 8_000_000,
-      Mists: 8_000_000,
-    },
-    Crafting: { Total: 28_000_000 },
-    Gathering: { All: { Total: 42_000_000 } },
-  });
-
-  const recentKills: KillEvent[] = [
-    {
-      EventId: 104592,
-      TimeStamp: "10:42:15",
-      Killer: {
-        Id: "p_101",
-        Name: "LordAlbion",
-        GuildName: "Black Rose Vanguard",
-        AverageItemPower: 1465,
-        Equipment: {
-          MainHand: { Type: "T8_MAIN_SWORD" },
-          Armor: { Type: "T7_ARMOR_CLOTH_SET3@1" },
-          Head: { Type: "T7_HEAD_PLATE_SET1" },
-          Shoes: { Type: "T7_SHOES_LEATHER_SET1" },
-        },
-      },
-      Victim: {
-        Id: "v_842",
-        Name: "RedZoneBandit",
-        GuildName: "Shadow Syndicate",
-        AverageItemPower: 1280,
-        Equipment: {
-          MainHand: { Type: "T7_2H_BOW" },
-          Armor: { Type: "T6_ARMOR_LEATHER_SET1" },
-          Head: { Type: "T6_HEAD_LEATHER_SET1" },
-          Shoes: { Type: "T6_SHOES_PLATE_SET1" },
-        },
-      },
-      TotalVictimKillFame: 385000,
-      Location: "Deathstone Valley",
-    },
-    {
-      EventId: 104521,
-      TimeStamp: "09:55:00",
-      Killer: {
-        Id: "p_101",
-        Name: "LordAlbion",
-        GuildName: "Black Rose Vanguard",
-        AverageItemPower: 1450,
-        Equipment: {
-          MainHand: { Type: "T8_MAIN_SWORD" },
-          Armor: { Type: "T7_ARMOR_CLOTH_SET3@1" },
-        },
-      },
-      Victim: {
-        Id: "v_711",
-        Name: "MistStalker99",
-        AverageItemPower: 1190,
-        Equipment: {
-          MainHand: { Type: "T6_2H_CROSSBOW" },
-          Armor: { Type: "T6_ARMOR_CLOTH_SET1" },
-        },
-      },
-      TotalVictimKillFame: 245000,
-      Location: "Mists of Avalon",
-    },
-  ];
+  const [player, setPlayer] = useState<PlayerSearchResult | null>(null);
+  const [recentKills, setRecentKills] = useState<KillEvent[]>([]);
 
   const handleSearch = async (queryToSearch = searchQuery) => {
     if (!queryToSearch.trim()) return;
     setIsLoading(true);
-    const result = await searchAlbionPlayer(queryToSearch, selectedRegion);
-    if (result.players.length > 0) {
-      setPlayer(result.players[0]);
-    } else {
-      showToast(`No player found matching "${queryToSearch}" on ${selectedRegion} server.`, "error");
+    try {
+      const result = await searchAlbionPlayer(queryToSearch, selectedRegion);
+      if (result.players.length > 0) {
+        const found = result.players[0];
+        // Fetch detailed LifetimeStatistics (PvE, Gathering, Crafting)
+        const detailed = await getPlayerDetails(found.Id, selectedRegion);
+        setPlayer(detailed || found);
+
+        // Fetch real kills/deaths
+        const kills = await getPlayerKills(found.Id, selectedRegion);
+        setRecentKills(kills);
+        showToast(`Loaded player data for ${found.Name}`, "success");
+      } else {
+        showToast(`No player found matching "${queryToSearch}" on ${selectedRegion} server.`, "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error querying official Albion servers", "error");
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const formatNumber = (num?: number) => {
@@ -177,7 +128,7 @@ export const PlayerInfoView: React.FC = () => {
         {/* Quick Search Tags */}
         <div className="flex items-center gap-2 text-xs text-slate-400 pt-1">
           <span>Popular searches:</span>
-          {["LordAlbion", "Robinhoodrs", "Nausk", "Shozen"].map((tag) => (
+          {["Savage", "Robinhoodrs", "Nausk", "Shozen"].map((tag) => (
             <button
               key={tag}
               onClick={() => {
@@ -191,6 +142,17 @@ export const PlayerInfoView: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Empty Search Prompt */}
+      {!player && !isLoading && (
+        <div className="py-24 text-center text-slate-500 text-xs space-y-3 glass-panel rounded-2xl border border-slate-800">
+          <UserCheck className="w-10 h-10 text-slate-600 mx-auto" />
+          <p className="text-sm font-semibold text-slate-300">Search Any Albion Online Player</p>
+          <p className="text-slate-500 max-w-sm mx-auto leading-relaxed">
+            Enter your character username above and select your server ({selectedRegion}) to inspect official player stats, PvE fame breakdown, kill ratio, and live killboard events.
+          </p>
+        </div>
+      )}
 
       {/* Player Profile Details */}
       {player && (
@@ -362,7 +324,12 @@ export const PlayerInfoView: React.FC = () => {
           ) : (
             /* Recent Kills List */
             <div className="space-y-3">
-              {recentKills.map((kill) => (
+              {recentKills.length === 0 ? (
+                <div className="py-16 text-center text-slate-500 text-xs">
+                  No recent PvP kills or deaths recorded on the killboard for this player.
+                </div>
+              ) : (
+                recentKills.map((kill) => (
                 <div
                   key={kill.EventId}
                   className="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-colors"
@@ -397,7 +364,7 @@ export const PlayerInfoView: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              ))}
+              )))}
             </div>
           )}
         </div>

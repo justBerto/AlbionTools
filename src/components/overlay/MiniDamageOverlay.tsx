@@ -38,7 +38,7 @@ export const MiniDamageOverlay: React.FC<MiniDamageOverlayProps> = ({
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
       const current = getCurrentWindow();
-      await current.close();
+      await current.hide();
     } catch {
       if (isStandalone) {
         window.close();
@@ -116,9 +116,14 @@ export const MiniDamageOverlay: React.FC<MiniDamageOverlayProps> = ({
 
       {/* Mini List */}
       <div className="p-3 space-y-1.5 flex-1 overflow-y-auto">
-        {party
-          .sort((a, b) => (metricMode === "hps" ? b.hps - a.hps : b.dps - a.dps))
-          .map((player, index) => {
+        {party.length === 0 ? (
+          <div className="py-8 text-center text-slate-500 text-xs">
+            Awaiting combat data in Albion Online...
+          </div>
+        ) : (
+          party
+            .sort((a, b) => (metricMode === "hps" ? b.hps - a.hps : b.dps - a.dps))
+            .map((player, index) => {
             const value = metricMode === "hps" ? player.hps : player.dps;
             const percentage = player.damagePercentage;
 
@@ -160,7 +165,8 @@ export const MiniDamageOverlay: React.FC<MiniDamageOverlayProps> = ({
                 </div>
               </div>
             );
-          })}
+          })
+        )}
       </div>
 
       {/* Footer Total */}

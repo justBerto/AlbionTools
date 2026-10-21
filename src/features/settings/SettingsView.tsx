@@ -22,18 +22,43 @@ export const SettingsView: React.FC = () => {
   const { showToast } = useToast();
   const { playDungeonClosedChime, playRareLootChime } = useAudioAlert();
 
-  const [provider, setProvider] = useState<"Npcap" | "Sockets">("Npcap");
-  const [server, setServer] = useState<ServerRegion>("Europe (Amsterdam)");
-  const [packetFilter, setPacketFilter] = useState(
-    "((ip and ((udp and (port 5055 or port 5056 or port 5058)) or (ip[6:2] & 0x3fff != 0))) or (ip6 and (udp and (port 5055 or port 5056 or port 5058))))"
+  const [provider, setProvider] = useState<"Npcap" | "Sockets">(
+    () => (localStorage.getItem("albiontools_packet_provider") as any) || "Npcap"
   );
-  const [dungeonSoundVolume, setDungeonSoundVolume] = useState(80);
-  const [itemDropSoundVolume, setItemDropSoundVolume] = useState(100);
-  const [autoStartSniffer, setAutoStartSniffer] = useState(true);
-  const [overlayHotkey, setOverlayHotkey] = useState("F9");
-  const [resetHotkey, setResetHotkey] = useState("F10");
+  const [server, setServer] = useState<ServerRegion>(
+    () => (localStorage.getItem("albiontools_server") as ServerRegion) || "Asia (Singapore)"
+  );
+  const [packetFilter, setPacketFilter] = useState(
+    () =>
+      localStorage.getItem("albiontools_packet_filter") ||
+      "((ip and ((udp and (port 5055 or port 5056 or port 5058)) or (ip[6:2] & 0x3fff != 0))) or (ip6 and (udp and (port 5055 or port 5056 or port 5058))))"
+  );
+  const [dungeonSoundVolume, setDungeonSoundVolume] = useState(() =>
+    localStorage.getItem("albiontools_dungeon_vol") ? Number(localStorage.getItem("albiontools_dungeon_vol")) : 80
+  );
+  const [itemDropSoundVolume, setItemDropSoundVolume] = useState(() =>
+    localStorage.getItem("albiontools_drop_vol") ? Number(localStorage.getItem("albiontools_drop_vol")) : 100
+  );
+  const [autoStartSniffer, setAutoStartSniffer] = useState(
+    () => localStorage.getItem("albiontools_autostart") !== "false"
+  );
+  const [overlayHotkey, setOverlayHotkey] = useState(
+    () => localStorage.getItem("albiontools_overlay_hotkey") || "F9"
+  );
+  const [resetHotkey, setResetHotkey] = useState(
+    () => localStorage.getItem("albiontools_reset_hotkey") || "F10"
+  );
 
   const handleSave = () => {
+    localStorage.setItem("albiontools_server", server);
+    localStorage.setItem("albiontools_packet_provider", provider);
+    localStorage.setItem("albiontools_packet_filter", packetFilter);
+    localStorage.setItem("albiontools_dungeon_vol", dungeonSoundVolume.toString());
+    localStorage.setItem("albiontools_drop_vol", itemDropSoundVolume.toString());
+    localStorage.setItem("albiontools_autostart", autoStartSniffer.toString());
+    localStorage.setItem("albiontools_overlay_hotkey", overlayHotkey);
+    localStorage.setItem("albiontools_reset_hotkey", resetHotkey);
+    window.dispatchEvent(new CustomEvent("albiontools_settings_changed", { detail: { server } }));
     showToast("Settings configuration saved successfully", "success");
   };
 

@@ -33,12 +33,16 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
   const [currentStep, setCurrentStep] = useState<number>(1);
   const totalSteps = 4;
 
-  const [language, setLanguage] = useState<string>("id");
+  const [language, setLanguage] = useState<string>(() => localStorage.getItem("albiontools_language") || "en");
   const [gameFolder, setGameFolder] = useState<string>(
-    "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Albion Online\\game"
+    () => localStorage.getItem("albiontools_game_folder") || "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Albion Online\\game"
   );
-  const [serverRegion, setServerRegion] = useState<ServerRegion>("Europe (Amsterdam)");
-  const [packetProvider, setPacketProvider] = useState<"npcap" | "sockets">("npcap");
+  const [serverRegion, setServerRegion] = useState<ServerRegion>(
+    () => (localStorage.getItem("albiontools_server") as ServerRegion) || "Asia (Singapore)"
+  );
+  const [packetProvider, setPacketProvider] = useState<"npcap" | "sockets">(
+    () => (localStorage.getItem("albiontools_packet_provider") as any) || "npcap"
+  );
 
   if (!isOpen) return null;
 
@@ -124,8 +128,8 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
 
               <div className="grid grid-cols-2 gap-3 pt-2">
                 {[
-                  { id: "id", label: "Bahasa Indonesia", sub: "Indonesian (Default)", flag: "ID" },
-                  { id: "en", label: "English", sub: "Global Language", flag: "EN" },
+                  { id: "en", label: "English", sub: "Global Language (Default)", flag: "EN" },
+                  { id: "id", label: "Bahasa Indonesia", sub: "Indonesian", flag: "ID" },
                   { id: "de", label: "Deutsch", sub: "German", flag: "DE" },
                   { id: "ru", label: "Русский", sub: "Russian", flag: "RU" },
                 ].map((item) => (

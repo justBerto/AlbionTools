@@ -31,11 +31,27 @@ interface SpellDetail {
 
 export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party, onToggleOverlay }) => {
   const [metricMode, setMetricMode] = useState<"dps" | "hps" | "taken">("dps");
-  const [inCombat, setInCombat] = useState(true);
-  const [fightSeconds, setFightSeconds] = useState(102); // 01:42
-  const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>("1");
+  const [fightSeconds, setFightSeconds] = useState(0);
+  const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(null);
 
-  // Timer ticker
+  // Automatic combat detection based on party damage/healing activity
+  const hasCombatActivity = party.some((p) => p.dps > 0 || p.hps > 0);
+  const [inCombat, setInCombat] = useState(false);
+
+  useEffect(() => {
+    let inactivityTimer: any = null;
+    if (hasCombatActivity) {
+      setInCombat(true);
+    } else if (inCombat) {
+      // 6 second combat dropoff timeout
+      inactivityTimer = setTimeout(() => {
+        setInCombat(false);
+      }, 6000);
+    }
+    return () => clearTimeout(inactivityTimer);
+  }, [hasCombatActivity, inCombat]);
+
+  // Fight timer ticks ONLY while genuinely in combat
   useEffect(() => {
     let timer: any = null;
     if (inCombat) {
@@ -57,10 +73,15 @@ export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party, onToggl
   const handleReset = () => {
     setFightSeconds(0);
     setInCombat(false);
+    setExpandedPlayerId(null);
     showToast("Combat session reset. Awaiting next damage event.", "info");
   };
 
   const copyCombatReport = () => {
+    if (party.length === 0) {
+      showToast("No combat data available to copy", "info");
+      return;
+    }
     const lines = party
       .sort((a, b) => b.dps - a.dps)
       .map((p, idx) => `${idx + 1}. ${p.name} - ${p.dps.toLocaleString()} DPS (${p.damagePercentage}%)`);
@@ -69,7 +90,7 @@ export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party, onToggl
     showToast("Combat DPS report copied to clipboard for Discord", "success");
   };
 
-  // Mock spell breakdown for expanded player
+  // Spell breakdown for expanded player
   const sampleSpells: SpellDetail[] = [
     { id: "1", name: "Heroic Strike", slot: "Q", damage: 48500, hits: 32, critRate: 24.5 },
     { id: "2", name: "Iron Will", slot: "W", damage: 12200, hits: 8, critRate: 12.0 },
@@ -91,17 +112,14 @@ export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party, onToggl
 
           <div className="h-4 w-px bg-slate-800" />
 
-          {/* Combat State Badge & Fight Timer */}
+          {/* Automatic Combat State Badge & Fight Timer */}
           <div className="flex items-center gap-3 text-xs">
-            <button
-              onClick={() => setInCombat(!inCombat)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors"
-            >
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800">
               <div className={`w-2 h-2 rounded-full ${inCombat ? 'bg-rose-500 animate-ping' : 'bg-slate-500'}`} />
-              <span className="font-semibold text-slate-200">
+              <span className={`font-semibold ${inCombat ? "text-rose-400" : "text-slate-400"}`}>
                 {inCombat ? "IN COMBAT" : "OUT OF COMBAT"}
               </span>
-            </button>
+            </div>
 
             <span className="font-mono text-slate-400 bg-slate-900/80 px-2 py-1 rounded border border-slate-800">
               Duration: <strong className="text-slate-100">{formatFightTime(fightSeconds)}</strong>
@@ -154,26 +172,39 @@ export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party, onToggl
           <button
             onClick={async () => {
               try {
-                const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
-                const overlayWin = new WebviewWindow("albion-dps-overlay", {
-                  url: "/?overlay=true",
-                  title: "AlbionTools DPS Meter",
-                  width: 360,
-                  height: 340,
-                  minWidth: 280,
-                  minHeight: 200,
-                  alwaysOnTop: true,
-                  decorations: false,
-                  transparent: true,
-                  skipTaskbar: false,
-                });
-                overlayWin.once("tauri://error", () => {
+                const isTauri = typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__);
+                if (isTauri) {
+                  const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+                  let overlay = await WebviewWindow.getByLabel("overlay");
+                  if (overlay) {
+                    await overlay.show();
+                    await overlay.setFocus();
+                    await overlay.setAlwaysOnTop(true);
+                  } else {
+                    overlay = new WebviewWindow("overlay", {
+                      url: "/?overlay=true",
+                      title: "AlbionTools DPS Meter",
+                      width: 360,
+                      height: 340,
+                      alwaysOnTop: true,
+                      decorations: false,
+                      transparent: true,
+                    });
+                    await overlay.show();
+                    await overlay.setFocus();
+                  }
+                  showToast("Floating DPS Meter launched (Always On Top)", "success");
+                } else if (onToggleOverlay) {
+                  onToggleOverlay();
+                  showToast("In-app floating DPS meter overlay enabled", "info");
+                } else {
                   window.open("/?overlay=true", "AlbionToolsDPS", "width=360,height=340");
-                });
-                showToast("Floating DPS Meter launched (Always On Top)", "success");
-              } catch {
-                window.open("/?overlay=true", "AlbionToolsDPS", "width=360,height=340,menubar=no,toolbar=no,location=no,status=no");
-                showToast("Floating DPS Meter opened in popout window", "info");
+                  showToast("Floating DPS Meter opened in popout window", "info");
+                }
+              } catch (err) {
+                console.error("Overlay launch error:", err);
+                onToggleOverlay?.();
+                showToast("Floating DPS Meter active in overlay mode", "info");
               }
             }}
             className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 rounded-lg border border-amber-500/30 transition-colors"
@@ -206,9 +237,18 @@ export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party, onToggl
           </div>
 
           <div className="space-y-2.5">
-            {party
-              .sort((a, b) => (metricMode === "hps" ? b.hps - a.hps : b.dps - a.dps))
-              .map((player, index) => {
+            {party.length === 0 ? (
+              <div className="py-20 text-center space-y-3">
+                <Swords className="w-10 h-10 text-slate-700 mx-auto" />
+                <p className="text-sm font-semibold text-slate-300">No Combat Data Recorded</p>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                  Enter combat with mobs or hostile players in Albion Online. Your group DPS, healing output, and ability casts will be recorded in real-time.
+                </p>
+              </div>
+            ) : (
+              party
+                .sort((a, b) => (metricMode === "hps" ? b.hps - a.hps : b.dps - a.dps))
+                .map((player, index) => {
                 const value = metricMode === "hps" ? player.hps : player.dps;
                 const percentage = player.damagePercentage;
                 const isExpanded = expandedPlayerId === player.id;
@@ -305,7 +345,8 @@ export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party, onToggl
                     )}
                   </div>
                 );
-              })}
+              })
+            )}
           </div>
         </div>
 

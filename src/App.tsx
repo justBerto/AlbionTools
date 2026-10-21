@@ -21,7 +21,8 @@ import {
   GameStatus, 
   SessionStats, 
   PartyMember, 
-  LootItem 
+  LootItem,
+  ServerRegion 
 } from "./types";
 
 
@@ -44,6 +45,11 @@ export function App() {
   // Standalone floating overlay window check (Tauri or popout window)
   const isOverlayStandalone = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("overlay") === "true";
 
+  // Helper to load persistent server choice
+  const getInitialServer = (): ServerRegion => {
+    return (localStorage.getItem("albiontools_server") as ServerRegion) || "Asia (Singapore)";
+  };
+
   // Live game status state
   const [gameStatus, setGameStatus] = useState<GameStatus>(
     isDev
@@ -51,7 +57,7 @@ export function App() {
           isGameDataLoaded: true,
           isSnifferActive: true,
           isServerDetected: true,
-          serverRegion: "Europe (Amsterdam)",
+          serverRegion: getInitialServer(),
           isCharacterDetected: true,
           characterName: "LordAlbion",
           guildName: "Black Rose Vanguard",
@@ -65,7 +71,7 @@ export function App() {
           isGameDataLoaded: false,
           isSnifferActive: false,
           isServerDetected: false,
-          serverRegion: "Europe (Amsterdam)",
+          serverRegion: getInitialServer(),
           isCharacterDetected: false,
           characterName: "Waiting for Albion Online...",
           guildName: undefined,
@@ -76,6 +82,17 @@ export function App() {
           zoneDanger: "Blue",
         }
   );
+
+  // Sync settings when modified from SettingsView
+  useEffect(() => {
+    const handleSettingsChange = (e: any) => {
+      if (e.detail?.server) {
+        setGameStatus((prev) => ({ ...prev, serverRegion: e.detail.server }));
+      }
+    };
+    window.addEventListener("albiontools_settings_changed", handleSettingsChange);
+    return () => window.removeEventListener("albiontools_settings_changed", handleSettingsChange);
+  }, []);
 
   // Session stats state with live timer
   const [sessionStats, setSessionStats] = useState<SessionStats>(
@@ -272,7 +289,7 @@ export function App() {
       case "party":
         return <PartyView party={partyMembers} onUpdateParty={setPartyMembers} />;
       case "guild":
-        return <GuildView />;
+        return <GuildView guildName={gameStatus.guildName} allianceName={gameStatus.allianceName} />;
       case "storage":
         return <StorageView />;
       case "map-history":
