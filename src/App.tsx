@@ -236,7 +236,7 @@ export function App() {
       case "dungeon":
         return <DungeonView />;
       case "item-search":
-        return <ItemSearchView />;
+        return <ItemSearchView onNavigateToTrade={() => setCurrentTab("trade")} />;
       case "crafting":
         return <CraftingView />;
       case "trade":
