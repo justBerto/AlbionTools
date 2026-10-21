@@ -56,10 +56,8 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
         // 1. Initialize packet sniffer pipeline
         var albionParser = new AlbionParser();
         var eventHandler = new GameEventHandler(albionParser);
-        var packetProvider = new SocketsPacketProvider(albionParser);
 
-        // 2. Wire Sniffer Events
-        packetProvider.OnGameDataDetected += () =>
+        void OnGameData()
         {
             _isSnifferActive = true;
             _isServerDetected = true;
@@ -68,9 +66,9 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
             Console.WriteLine("[SNIFFER] Live Albion Online game packets detected!");
             Console.ResetColor();
             _ = BroadcastGameStatusAsync();
-        };
+        }
 
-        packetProvider.OnServerPacketDetected += (ip) =>
+        void OnServerPacket(IPAddress ip)
         {
             var region = ServerDetectionService.DetectRegion(ip);
             if (region != AlbionServerRegion.Unknown)
@@ -83,14 +81,7 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
                     _ = BroadcastGameStatusAsync();
                 }
             }
-        };
-
-        packetProvider.OnCaptureError += (err) =>
-        {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"[SNIFFER WARNING] {err}");
-            Console.ResetColor();
-        };
+        }
 
         eventHandler.OnPlayerIdentified += (name) =>
         {
@@ -163,20 +154,32 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
             });
         };
 
-        // 3. Start Raw Socket Capture
-        bool started = packetProvider.Start();
-        if (started)
+        // 2. Start Capture: Try Npcap first (No admin required), fallback to Raw Sockets
+        IPacketProvider packetProvider;
+        if (NpcapPacketProvider.IsNpcapInstalled())
         {
-            _isSnifferActive = true;
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("[SNIFFER] Raw socket sniffer started successfully.");
-            Console.ResetColor();
+            var npcap = new NpcapPacketProvider(albionParser);
+            npcap.OnGameDataDetected += OnGameData;
+            npcap.OnServerPacketDetected += OnServerPacket;
+            npcap.OnCaptureError += (err) => Console.WriteLine($"[NPCAP WARNING] {err}");
+
+            if (npcap.Start())
+            {
+                packetProvider = npcap;
+                _isSnifferActive = true;
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("[SNIFFER] Capture Engine: Npcap (Standard User mode, no Administrator required!)");
+                Console.ResetColor();
+            }
+            else
+            {
+                npcap.Dispose();
+                packetProvider = SetupRawSockets(albionParser, OnGameData, OnServerPacket);
+            }
         }
         else
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("[SNIFFER] Notice: Raw socket capture requires Administrator privileges. Waiting for elevation or active network stream.");
-            Console.ResetColor();
+            packetProvider = SetupRawSockets(albionParser, OnGameData, OnServerPacket);
         }
 
         // 4. Start Local WebSocket IPC Server on Port 4040
@@ -398,6 +401,36 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
         }
 
         return ("Tier 5", "Yellow");
+    }
+
+    private static SocketsPacketProvider SetupRawSockets(AlbionParser albionParser, Action onGameData, Action<IPAddress> onServerPacket)
+    {
+        var rawSockets = new SocketsPacketProvider(albionParser);
+        rawSockets.OnGameDataDetected += onGameData;
+        rawSockets.OnServerPacketDetected += onServerPacket;
+        rawSockets.OnCaptureError += (err) =>
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"[RAW SOCKETS] {err}");
+            Console.ResetColor();
+        };
+
+        bool started = rawSockets.Start();
+        if (started)
+        {
+            _isSnifferActive = true;
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("[SNIFFER] Using Windows Raw Sockets (Administrator mode).");
+            Console.ResetColor();
+        }
+        else
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("[SNIFFER NOTICE] Npcap not available and Raw Sockets requires Administrator rights. For non-admin tracking, ensure Npcap is installed from https://npcap.com/");
+            Console.ResetColor();
+        }
+
+        return rawSockets;
     }
 
     private static async Task BroadcastJsonAsync(object payload)
