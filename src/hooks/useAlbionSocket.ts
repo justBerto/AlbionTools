@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GameStatus, SessionStats, PartyMember, LootItem } from "../types";
 
 interface UseAlbionSocketProps {
@@ -9,88 +9,111 @@ interface UseAlbionSocketProps {
   onDungeonEvent?: (event: any) => void;
 }
 
-export function useAlbionSocket({
-  onGameStatusUpdate,
-  onSessionStatsUpdate,
-  onPartyUpdate,
-  onLootReceived,
-  onDungeonEvent,
-}: UseAlbionSocketProps = {}) {
+export function useAlbionSocket(props: UseAlbionSocketProps = {}) {
   const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(true);
   const [lastMessageTime, setLastMessageTime] = useState<string | null>(null);
+
+  // Store latest callbacks in ref to avoid re-triggering connection effects
+  const propsRef = useRef(props);
+  useEffect(() => {
+    propsRef.current = props;
+  });
+
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<any>(null);
-
-  const connect = useCallback(() => {
-    try {
-      setIsConnecting(true);
-      const wsUrl = "ws://127.0.0.1:4040/ws";
-      const ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        console.log("🟢 [AlbionTools] Connected to local Sniffer Daemon on", wsUrl);
-        setIsConnected(true);
-        setIsConnecting(false);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          setLastMessageTime(new Date().toLocaleTimeString());
-
-          switch (payload.event) {
-            case "GAME_STATUS":
-              onGameStatusUpdate?.(payload.data);
-              break;
-            case "SESSION_STATS":
-              onSessionStatsUpdate?.(payload.data);
-              break;
-            case "PARTY_UPDATE":
-              onPartyUpdate?.(payload.data);
-              break;
-            case "NEW_LOOT":
-              onLootReceived?.(payload.data);
-              break;
-            case "DUNGEON_EVENT":
-              onDungeonEvent?.(payload.data);
-              break;
-            default:
-              // Custom event
-              break;
-          }
-        } catch (err) {
-          console.warn("[AlbionTools] Failed to parse daemon packet:", err);
-        }
-      };
-
-      ws.onclose = () => {
-        setIsConnected(false);
-        setIsConnecting(false);
-        console.log("🔴 [AlbionTools] Disconnected from Sniffer Daemon. Reconnecting in 3s...");
-        reconnectTimeoutRef.current = setTimeout(connect, 3000);
-      };
-
-      ws.onerror = () => {
-        setIsConnected(false);
-        ws.close();
-      };
-
-      socketRef.current = ws;
-    } catch {
-      setIsConnected(false);
-      setIsConnecting(false);
-      reconnectTimeoutRef.current = setTimeout(connect, 3000);
-    }
-  }, [onGameStatusUpdate, onSessionStatsUpdate, onPartyUpdate, onLootReceived, onDungeonEvent]);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
+    function connect() {
+      if (!isMountedRef.current) return;
+      if (
+        socketRef.current &&
+        (socketRef.current.readyState === WebSocket.OPEN ||
+          socketRef.current.readyState === WebSocket.CONNECTING)
+      ) {
+        return;
+      }
+
+      try {
+        const wsUrl = "ws://127.0.0.1:4040/ws";
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          if (!isMountedRef.current) {
+            ws.close();
+            return;
+          }
+          console.log("🟢 [AlbionTools] Connected to local Sniffer Daemon on", wsUrl);
+          setIsConnected(true);
+        };
+
+        ws.onmessage = (event) => {
+          if (!isMountedRef.current) return;
+          try {
+            const payload = JSON.parse(event.data);
+            setLastMessageTime(new Date().toLocaleTimeString());
+
+            switch (payload.event) {
+              case "GAME_STATUS":
+                propsRef.current.onGameStatusUpdate?.(payload.data);
+                break;
+              case "SESSION_STATS":
+                propsRef.current.onSessionStatsUpdate?.(payload.data);
+                break;
+              case "PARTY_UPDATE":
+                propsRef.current.onPartyUpdate?.(payload.data);
+                break;
+              case "NEW_LOOT":
+                propsRef.current.onLootReceived?.(payload.data);
+                break;
+              case "DUNGEON_EVENT":
+                propsRef.current.onDungeonEvent?.(payload.data);
+                break;
+              default:
+                break;
+            }
+          } catch (err) {
+            console.warn("[AlbionTools] Failed to parse daemon packet:", err);
+          }
+        };
+
+        ws.onclose = () => {
+          if (!isMountedRef.current) return;
+          setIsConnected(false);
+          if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = setTimeout(connect, 5000);
+        };
+
+        ws.onerror = () => {
+          if (!isMountedRef.current) return;
+          setIsConnected(false);
+          ws.close();
+        };
+
+        socketRef.current = ws;
+      } catch {
+        if (!isMountedRef.current) return;
+        setIsConnected(false);
+        if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = setTimeout(connect, 5000);
+      }
+    }
+
     connect();
+
     return () => {
+      isMountedRef.current = false;
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-      if (socketRef.current) socketRef.current.close();
+      if (socketRef.current) {
+        socketRef.current.onclose = null;
+        socketRef.current.onerror = null;
+        socketRef.current.close();
+        socketRef.current = null;
+      }
     };
-  }, [connect]);
+  }, []); // Run connection lifecycle only once on mount
 
   const sendCommand = (action: string, payload?: any) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -100,7 +123,6 @@ export function useAlbionSocket({
 
   return {
     isConnected,
-    isConnecting,
     lastMessageTime,
     sendCommand,
   };

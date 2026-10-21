@@ -35,6 +35,8 @@ pub fn run() {
         .setup(|app| {
             if let Some(main_win) = app.get_webview_window("main") {
                 let _ = main_win.set_theme(Some(tauri::Theme::Dark));
+                #[cfg(debug_assertions)]
+                main_win.open_devtools();
             }
             Ok(())
         })
