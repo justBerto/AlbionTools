@@ -173,36 +173,16 @@ export const DamageMeterView: React.FC<DamageMeterViewProps> = ({ party }) => {
               try {
                 const isTauri = typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__);
                 if (isTauri) {
-                  const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
-                  let overlay = await WebviewWindow.getByLabel("overlay");
-                  if (overlay) {
-                    await overlay.show();
-                    await overlay.setFocus();
-                    await overlay.setAlwaysOnTop(true);
-                  } else {
-                    overlay = new WebviewWindow("overlay", {
-                      url: "/?overlay=true",
-                      title: "AlbionTools DPS Meter",
-                      width: 360,
-                      height: 340,
-                      minWidth: 260,
-                      minHeight: 180,
-                      alwaysOnTop: true,
-                      decorations: false,
-                      transparent: false,
-                      resizable: true,
-                    });
-                    await overlay.show();
-                    await overlay.setFocus();
-                  }
+                  const { invoke } = await import("@tauri-apps/api/core");
+                  await invoke("show_overlay_window");
                   showToast("Floating DPS Meter launched (Always On Top)", "success");
                 } else {
-                  window.open("/?overlay=true", "AlbionToolsDPS", "width=360,height=340");
+                  window.open("/index.html?overlay=true", "AlbionToolsDPS", "width=360,height=340");
                   showToast("Floating DPS Meter opened in popout window", "info");
                 }
               } catch (err) {
                 console.error("Overlay launch error:", err);
-                window.open("/?overlay=true", "AlbionToolsDPS", "width=360,height=340");
+                window.open("/index.html?overlay=true", "AlbionToolsDPS", "width=360,height=340");
                 showToast("Floating DPS Meter opened in popout window", "info");
               }
             }}

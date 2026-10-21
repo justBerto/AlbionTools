@@ -27,23 +27,57 @@ fn fetch_gameinfo(url: String) -> Result<String, String> {
     String::from_utf8(output.stdout).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn show_overlay_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("overlay") {
+        win.show().map_err(|e| e.to_string())?;
+        win.set_focus().map_err(|e| e.to_string())?;
+        win.set_always_on_top(true).map_err(|e| e.to_string())?;
+    } else {
+        let win = tauri::WebviewWindowBuilder::new(
+            &app,
+            "overlay",
+            tauri::WebviewUrl::App("index.html?overlay=true".into()),
+        )
+        .title("AlbionTools DPS Meter")
+        .inner_size(360.0, 340.0)
+        .min_inner_size(260.0, 180.0)
+        .always_on_top(true)
+        .decorations(false)
+        .transparent(false)
+        .resizable(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+        let _ = win.show();
+        let _ = win.set_focus();
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, fetch_gameinfo])
+        .invoke_handler(tauri::generate_handler![greet, fetch_gameinfo, show_overlay_window])
         .setup(|app| {
             if let Some(main_win) = app.get_webview_window("main") {
                 let _ = main_win.set_theme(Some(tauri::Theme::Dark));
                 #[cfg(debug_assertions)]
                 main_win.open_devtools();
             }
+            if let Some(overlay_win) = app.get_webview_window("overlay") {
+                let _ = overlay_win.set_theme(Some(tauri::Theme::Dark));
+            }
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
                     window.app_handle().exit(0);
+                } else if window.label() == "overlay" {
+                    let _ = window.hide();
+                    api.prevent_close();
                 }
             }
         })
