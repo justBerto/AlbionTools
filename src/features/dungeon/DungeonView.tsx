@@ -134,14 +134,83 @@ export const DungeonView: React.FC = () => {
       ? Math.round(filteredRuns.reduce((acc, r) => acc + r.durationSeconds, 0) / totalRunsCount)
       : 0;
 
-  // Efficiency entries (by Tier.Enchant)
-  const efficiencyEntries = [
-    { tierEnchant: "T8.1", lootScore: 92, fameScore: 88, avgLoot: 385_000, avgFame: 420_000, avgSec: 780 },
-    { tierEnchant: "T8.0", lootScore: 78, fameScore: 74, avgLoot: 310_000, avgFame: 340_000, avgSec: 690 },
-    { tierEnchant: "T7.1", lootScore: 68, fameScore: 70, avgLoot: 270_000, avgFame: 390_000, avgSec: 840 },
-    { tierEnchant: "T7.0", lootScore: 54, fameScore: 62, avgLoot: 187_000, avgFame: 302_000, avgSec: 575 },
-    { tierEnchant: "T6.2", lootScore: 46, fameScore: 52, avgLoot: 165_000, avgFame: 245_000, avgSec: 710 },
-  ];
+  // Group runs by Tier & Enchantment for Efficiency Matrix
+  const tierStatsMap = new Map<
+    string,
+    {
+      tierEnchant: string;
+      runsCount: number;
+      totalLoot: number;
+      totalFame: number;
+      totalSeconds: number;
+    }
+  >();
+
+  filteredRuns.forEach((r) => {
+    const key = `T${r.tier}.${r.enchantment}`;
+    const existing = tierStatsMap.get(key) || {
+      tierEnchant: key,
+      runsCount: 0,
+      totalLoot: 0,
+      totalFame: 0,
+      totalSeconds: 0,
+    };
+    existing.runsCount += 1;
+    existing.totalLoot += r.lootValue;
+    existing.totalFame += r.fame;
+    existing.totalSeconds += r.durationSeconds;
+    tierStatsMap.set(key, existing);
+  });
+
+  const efficiencyEntriesRaw = Array.from(tierStatsMap.values()).map((entry) => {
+    const avgLoot = Math.round(entry.totalLoot / entry.runsCount);
+    const avgFame = Math.round(entry.totalFame / entry.runsCount);
+    const avgSec = Math.round(entry.totalSeconds / entry.runsCount);
+    return {
+      tierEnchant: entry.tierEnchant,
+      runsCount: entry.runsCount,
+      avgLoot,
+      avgFame,
+      avgSec,
+      hourlyRate: avgSec > 0 ? Math.round((avgLoot / avgSec) * 3600) : 0,
+    };
+  });
+
+  const maxAvgLoot = Math.max(...efficiencyEntriesRaw.map((e) => e.avgLoot), 1);
+  const maxAvgFame = Math.max(...efficiencyEntriesRaw.map((e) => e.avgFame), 1);
+
+  const efficiencyEntries = efficiencyEntriesRaw
+    .sort((a, b) => b.avgLoot - a.avgLoot)
+    .map((e) => ({
+      ...e,
+      lootScore: Math.min(100, Math.round((e.avgLoot / maxAvgLoot) * 100)),
+      fameScore: Math.min(100, Math.round((e.avgFame / maxAvgFame) * 100)),
+    }));
+
+  // Performance Highlights calculations
+  const mostProfitable = [...efficiencyEntriesRaw].sort((a, b) => b.hourlyRate - a.hourlyRate)[0];
+  const mostPlayed = [...efficiencyEntriesRaw].sort((a, b) => b.runsCount - a.runsCount)[0];
+  const topLootRun = [...filteredRuns].sort((a, b) => b.lootValue - a.lootValue)[0];
+
+  const mapStatsMap = new Map<string, { mapName: string; totalLoot: number; count: number }>();
+  filteredRuns.forEach((r) => {
+    const existing = mapStatsMap.get(r.mapName) || { mapName: r.mapName, totalLoot: 0, count: 0 };
+    existing.totalLoot += r.lootValue;
+    existing.count += 1;
+    mapStatsMap.set(r.mapName, existing);
+  });
+  const bestMap = Array.from(mapStatsMap.values())
+    .map((m) => ({ ...m, avgLoot: Math.round(m.totalLoot / m.count) }))
+    .sort((a, b) => b.avgLoot - a.avgLoot)[0];
+
+  const validDurationRuns = filteredRuns.filter((r) => r.durationSeconds > 0);
+  const fastestRun = [...validDurationRuns].sort((a, b) => a.durationSeconds - b.durationSeconds)[0];
+
+  const totalChests = filteredRuns.reduce(
+    (acc, r) => acc + (r.chests.green + r.chests.blue + r.chests.purple + r.chests.gold),
+    0
+  );
+  const avgChestsPerRun = totalRunsCount > 0 ? (totalChests / totalRunsCount).toFixed(2) : "0.00";
 
   return (
     <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-80px)] select-none">
@@ -243,7 +312,7 @@ export const DungeonView: React.FC = () => {
         {/* Quick Reset Tools */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {}}
+            onClick={() => setRuns([])}
             className="flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 rounded-lg border border-rose-500/30 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -320,7 +389,7 @@ export const DungeonView: React.FC = () => {
             <span className="text-[10px] font-bold uppercase text-slate-400">Might</span>
           </div>
           <div className="text-lg font-extrabold text-purple-400 font-mono mt-0.5">
-            {formatNumber(3_840)}
+            {formatNumber(0)}
           </div>
           <span className="text-[10px] text-purple-500/80">Season</span>
         </div>
@@ -332,7 +401,7 @@ export const DungeonView: React.FC = () => {
             <span className="text-[10px] font-bold uppercase text-slate-400">Favor</span>
           </div>
           <div className="text-lg font-extrabold text-teal-400 font-mono mt-0.5">
-            {formatNumber(1_820)}
+            {formatNumber(0)}
           </div>
           <span className="text-[10px] text-teal-500/80">Guild</span>
         </div>
@@ -403,9 +472,11 @@ export const DungeonView: React.FC = () => {
               <span className="text-[10px] uppercase font-bold text-slate-400">Most Profitable</span>
               <div className="flex items-center gap-2 mt-1">
                 <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30 font-bold font-mono text-xs">
-                  T8.1
+                  {mostProfitable ? mostProfitable.tierEnchant : "-"}
                 </span>
-                <span className="text-xs font-bold text-slate-100 font-mono">1.75M / h</span>
+                <span className="text-xs font-bold text-slate-100 font-mono">
+                  {mostProfitable ? `${formatNumber(mostProfitable.hourlyRate)} / h` : "0 / h"}
+                </span>
               </div>
               <span className="text-[10px] text-slate-400 mt-1 block">Loot Value / Hour</span>
             </div>
@@ -415,9 +486,11 @@ export const DungeonView: React.FC = () => {
               <span className="text-[10px] uppercase font-bold text-slate-400">Most Played</span>
               <div className="flex items-center gap-2 mt-1">
                 <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold font-mono text-xs">
-                  T7.0
+                  {mostPlayed ? mostPlayed.tierEnchant : "-"}
                 </span>
-                <span className="text-xs font-bold text-slate-100 font-mono">18 Runs</span>
+                <span className="text-xs font-bold text-slate-100 font-mono">
+                  {mostPlayed ? `${mostPlayed.runsCount} Runs` : "0 Runs"}
+                </span>
               </div>
               <span className="text-[10px] text-slate-400 mt-1 block">Completed Sessions</span>
             </div>
@@ -426,36 +499,50 @@ export const DungeonView: React.FC = () => {
             <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
               <span className="text-[10px] uppercase font-bold text-slate-400">Top Loot Drop</span>
               <div className="text-xs font-bold text-amber-400 truncate mt-1">
-                Elder's Broadsword (T8)
+                {topLootRun && topLootRun.lootValue > 0
+                  ? `${topLootRun.type} (T${topLootRun.tier}.${topLootRun.enchantment})`
+                  : "No Drops Recorded"}
               </div>
-              <span className="text-[10px] text-slate-300 font-mono">245,000 Silver</span>
+              <span className="text-[10px] text-slate-300 font-mono">
+                {topLootRun && topLootRun.lootValue > 0
+                  ? `${formatNumber(topLootRun.lootValue)} Silver`
+                  : "0 Silver"}
+              </span>
             </div>
 
             {/* Best Dungeon Map */}
             <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
               <span className="text-[10px] uppercase font-bold text-slate-400">Best Map Location</span>
               <div className="text-xs font-bold text-slate-100 truncate mt-1">
-                Deathstone Valley
+                {bestMap ? bestMap.mapName : "No Data Recorded"}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">Avg Loot: 385k / run</span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {bestMap ? `Avg Loot: ${formatNumber(bestMap.avgLoot)} / run` : "Avg Loot: 0 / run"}
+              </span>
             </div>
 
             {/* Fastest Run */}
             <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
               <span className="text-[10px] uppercase font-bold text-slate-400">Fastest Run</span>
               <div className="text-xs font-bold text-slate-100 font-mono mt-1">
-                08m 00s
+                {fastestRun ? formatDuration(fastestRun.durationSeconds) : "00m 00s"}
               </div>
-              <span className="text-[10px] text-slate-400">T8.0 Hellgate · 2 Players</span>
+              <span className="text-[10px] text-slate-400 truncate block">
+                {fastestRun
+                  ? `T${fastestRun.tier}.${fastestRun.enchantment} ${fastestRun.type}`
+                  : "No Recorded Runs"}
+              </span>
             </div>
 
             {/* Average Chests Per Run */}
             <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
               <span className="text-[10px] uppercase font-bold text-slate-400">Chests / Run</span>
               <div className="text-xs font-bold text-slate-100 font-mono mt-1">
-                3.60 Chests
+                {avgChestsPerRun} Chests
               </div>
-              <span className="text-[10px] text-slate-400">Avg rarity: Blue & Purple</span>
+              <span className="text-[10px] text-slate-400">
+                {totalRunsCount > 0 ? "Avg across runs" : "No Chests Opened"}
+              </span>
             </div>
           </div>
 
@@ -485,40 +572,50 @@ export const DungeonView: React.FC = () => {
               <span className="col-span-2 text-right">Avg Time</span>
             </div>
 
-            {efficiencyEntries.map((entry, idx) => (
-              <div key={idx} className="grid grid-cols-12 items-center bg-slate-900/40 p-2 rounded-lg border border-slate-800/80 text-xs font-mono">
-                <span className="col-span-2 font-bold text-slate-200">{entry.tierEnchant}</span>
-                
-                {/* Loot Score Bar */}
-                <div className="col-span-4 px-2">
-                  <div className="flex items-center justify-between text-[11px] mb-1">
-                    <span className="text-slate-300 font-bold">{formatNumber(entry.avgLoot)}</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                    <div className="h-full bg-sky-500 rounded-full" style={{ width: `${entry.lootScore}%` }} />
-                  </div>
-                </div>
-
-                {/* Fame Score Bar */}
-                <div className="col-span-4 px-2">
-                  <div className="flex items-center justify-between text-[11px] mb-1">
-                    <span className="text-amber-400 font-bold">{formatNumber(entry.avgFame)}</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${entry.fameScore}%` }} />
-                  </div>
-                </div>
-
-                <span className="col-span-2 text-right text-slate-400 text-[11px]">
-                  {formatDuration(entry.avgSec)}
-                </span>
+            {efficiencyEntries.length === 0 ? (
+              <div className="py-12 text-center text-slate-500 text-xs font-mono">
+                No dungeon run data recorded for selected filters
               </div>
-            ))}
+            ) : (
+              efficiencyEntries.map((entry, idx) => (
+                <div key={idx} className="grid grid-cols-12 items-center bg-slate-900/40 p-2 rounded-lg border border-slate-800/80 text-xs font-mono">
+                  <span className="col-span-2 font-bold text-slate-200">{entry.tierEnchant}</span>
+                  
+                  {/* Loot Score Bar */}
+                  <div className="col-span-4 px-2">
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="text-slate-300 font-bold">{formatNumber(entry.avgLoot)}</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                      <div className="h-full bg-sky-500 rounded-full" style={{ width: `${entry.lootScore}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Fame Score Bar */}
+                  <div className="col-span-4 px-2">
+                    <div className="flex items-center justify-between text-[11px] mb-1">
+                      <span className="text-amber-400 font-bold">{formatNumber(entry.avgFame)}</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                      <div className="h-full bg-amber-500 rounded-full" style={{ width: `${entry.fameScore}%` }} />
+                    </div>
+                  </div>
+
+                  <span className="col-span-2 text-right text-slate-400 text-[11px]">
+                    {formatDuration(entry.avgSec)}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="h-8 bg-slate-900/80 border-t border-slate-800 px-4 flex items-center justify-between text-xs text-slate-400 font-mono">
             <span>Recommended Activity:</span>
-            <span className="text-amber-400 font-semibold">T8.1 Solo Random Dungeon for optimal Silver & Fame</span>
+            <span className="text-amber-400 font-semibold">
+              {efficiencyEntries.length > 0
+                ? `${efficiencyEntries[0].tierEnchant} for optimal Silver & Fame`
+                : "Awaiting dungeon runs to calculate recommendation"}
+            </span>
           </div>
         </div>
       </div>
