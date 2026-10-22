@@ -176,6 +176,23 @@ Engine: Raw Windows Sockets + Photon Protocol Parser
             });
         };
 
+        eventHandler.OnChestOpened += (chest) =>
+        {
+            _ = BroadcastJsonAsync(new
+            {
+                @event = "CHEST_OPENED",
+                data = new
+                {
+                    objectId = chest.ObjectId,
+                    chestType = chest.ChestType,
+                    category = chest.Category,
+                    rarity = chest.Rarity,
+                    location = chest.Location,
+                    timestamp = DateTime.Now.ToString("HH:mm:ss")
+                }
+            });
+        };
+
         // 2. Start Capture: Try Npcap first (No admin required), fallback to Raw Sockets
         IPacketProvider packetProvider;
         if (NpcapPacketProvider.IsNpcapInstalled())

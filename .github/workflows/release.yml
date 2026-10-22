@@ -55,27 +55,30 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'AlbionTools Release ${{ github.ref_name }}'
           releaseBody: |
-            ## 🛡️ AlbionTools — Companion & Telemetry Suite (${{ github.ref_name }})
+            ## 🛡️ AlbionTools: Companion & Telemetry Suite (${{ github.ref_name }})
 
             ### 🚀 What's New & Changelog
 
-            #### ✨ Added & Enhanced
-            - **Native Dark Mode Title Bar**: Configured Windows Immersive Dark Mode (`DWMWA_USE_IMMERSIVE_DARK_MODE` and `"theme": "Dark"`), giving the native OS window frame a sleek black finish that matches the dark theme.
-            - **Automated Combat Tracking**: DPS & HPS meters automatically detect combat activity with a 6-second dropoff timeout. Fight timer only ticks while actively in combat.
-            - **True Floating Overlay HUD**: Launch a compact, always-on-top draggable floating DPS/HPS overlay window over Albion Online and other fullscreen borderless applications.
-            - **Official API Player & Killboard Inspection**: Inspect player lifetime stats (PvE, Gathering, Crafting) and recent killboard events directly via native backend bridge without CORS errors.
-            - **Activity Time Filters**: Added time-range filtering on Gathering stats (Current Session, Today, Past 7 Days, All Time).
-            - **Bilingual Setup Wizard**: Setup wizard defaults to English with full support for dynamic switching to Bahasa Indonesia.
-            - **Settings Persistence**: Configured server region (Asia / Europe / Americas) and client settings persist reliably across application sessions.
+            #### ✨ New Features & Enhancements
+            - **Complete Game Item Encyclopedia**: Rebuilt the item database directly from official Albion Online game dumps (`items.bin`), featuring 675 base item families across all 6 categories (Weapons, Armor, Materials, Accessories, Consumables, Mounts) with full T1 to T8 tiers and .0 to .4 enchantments.
+            - **Dragonslayer Equipment & Crystal Weapons**: Full support for Dragonslayer Hood, Jacket, Shoes, Dragonhide artifacts, and all Crystal Weapons (including Crystal Reaper, Infinity Blade, Phantom Twinbow, etc.).
+            - **Instant Search & Tier Name Matching**: High-performance search indexing matching item names, unique game IDs, subcategories, and localized tier names (e.g. searching "Dragonslayer", "Crystal Reaper", or "Pine Logs" instantly highlights the item).
+            - **Player Weapon Icons in Damage Meter**: Equipped weapons are automatically detected from network packets and rendered as icons alongside player nicknames in the combat meter.
+            - **Streamlined Floating HUD Controls**: Floating DPS/HPS overlay now features Save Snapshot, Reset, and Copy to Clipboard controls directly modeled after top statistics tools.
+            - **Refined Session & Content Filters**: Unified session dropdowns ("Current Session" and "All Sessions") and streamlined content browsing across dungeons and open world.
+            - **Real-Time Market Prices & Historical Trends**: Direct live integration with Albion Online Data Project (AODP) API v2 across Asia, Europe, and Americas servers with interactive price history charts and arbitrage calculators.
+            - **High-Resolution Custom Branding**: Bundled bespoke application icons across all standard desktop resolutions (ICO, ICNS, PNG).
+            - **Native Dark Mode Title Bar**: Configured Windows Immersive Dark Mode (`DWMWA_USE_IMMERSIVE_DARK_MODE` and `"theme": "Dark"`), giving the native OS window frame a sleek dark finish.
 
-            #### 🐛 Bug Fixes
-            - **Eliminated Duplicate HUD Overlay**: Fixed an issue where clicking "Floating HUD" opened both a desktop window and an in-app overlay. The in-app bottom-right overlay has been completely removed.
-            - **Eliminated Blank White Screen on Reopen**: Resolved a zombie process lock issue where closing the main window kept background windows alive. Handled `CloseRequested` window event to terminate all processes cleanly on app exit.
-            - **Eliminated Flashing CMD Popup**: Added Windows `CREATE_NO_WINDOW` flag (`0x08000000`) to native curl requests, completely silencing child processes during player lookups.
+            #### 🐛 Bug Fixes & Refinements
+            - **Looted Chests Active Content Fix**: Resolved an issue where multiple active contents (e.g. Solo Dungeon and Open World) were flagged simultaneously. Added clean state isolation and auto-reset.
+            - **Header & Section Typography Polish**: Renamed "Looted Chests Matrix" to "Looted Chests" and removed confusing "(..)" and redundant "All content categories" dropdown clutter.
+            - **Zero Memory Bloat**: Optimized 25 MB raw game dump down to an ultra-compact 271 KB structured catalog, guaranteeing 60 FPS UI performance and sub-millisecond search execution.
+            - **Child Process Silence**: Enforced `CREATE_NO_WINDOW` on backend network bridges to eliminate flashing console windows during official API queries.
+            - **Eliminated Duplicate HUD Overlay**: Removed redundant in-app overlay so clicking "Floating HUD" only triggers the dedicated OS overlay window.
 
             #### 🗑️ Removed
             - **Redundant Topbar Buttons**: Removed duplicate custom Pin, Minimize, Maximize, and Close buttons from the header (relying on Windows native titlebar controls).
-            - **In-App Secondary HUD**: Removed duplicate bottom-right in-app overlay.
             - **Dummy Mock Telemetry**: Purged mock preview data from Dashboard, Dungeons, Gathering, Guild, Storage, Map History, Loss Explorer, and Event Logger.
 
             ### 📦 Download Windows Installers:

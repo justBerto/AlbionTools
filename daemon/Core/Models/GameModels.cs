@@ -115,3 +115,16 @@ public class GameSession
     public long TotalSilverEarned { get; set; }
     public int TotalItemsLooted { get; set; }
 }
+
+/// <summary>
+/// Represents a chest opening event.
+/// </summary>
+public class ChestOpeningEvent
+{
+    public int ObjectId { get; set; }
+    public string ChestType { get; set; } = "";
+    public string Category { get; set; } = "Open World";
+    public string Rarity { get; set; } = "green";
+    public string Location { get; set; } = "";
+    public DateTime OpenedAt { get; set; } = DateTime.UtcNow;
+}

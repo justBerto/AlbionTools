@@ -1,7 +1,7 @@
 # 🛡️ AlbionTools — Companion & Telemetry Suite
 
 <p align="center">
-  <img src="public/assets/albion_icon.png" width="120" height="120" alt="AlbionTools Logo" />
+  <img src="public/assets/albion_icon.png" width="160" height="160" alt="AlbionTools Logo" />
 </p>
 
 <p align="center">

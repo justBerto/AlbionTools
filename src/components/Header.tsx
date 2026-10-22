@@ -59,8 +59,8 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2">
             <img 
               src="/assets/albion_icon.png" 
-              alt="Albion Online" 
-              className="w-7 h-7 object-contain drop-shadow" 
+              alt="AlbionTools" 
+              className="w-8 h-8 rounded-lg object-contain shadow-sm border border-slate-700/50 drop-shadow" 
             />
             <span className="font-extrabold tracking-wider text-base text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 font-['Outfit']">
               AlbionTools

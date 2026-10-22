@@ -35,10 +35,12 @@ public class GameEventHandler
     public event Action<string>? OnLocationChanged;
     public event Action<ResolvedCluster>? OnLocationDetailsChanged;
     public event Action<string>? OnPlayerIdentified;
+    public event Action<ChestOpeningEvent>? OnChestOpened;
     public event Action<int, Dictionary<byte, object>>? OnRawEvent;
     public event Action<int, Dictionary<byte, object>>? OnRawResponse;
 
     private readonly List<string> _partyMembers = [];
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, (string ChestType, string Category, string Rarity)> _activeChests = new();
 
     public string CurrentLocation => _currentLocation;
     public string PlayerName => _playerName;
@@ -91,6 +93,15 @@ public class GameEventHandler
                 break;
             case EventCodes.NewCharacter:
                 HandleNewCharacter(parameters);
+                break;
+            case EventCodes.CharacterEquipmentChanged:
+                HandleCharacterEquipmentChanged(parameters);
+                break;
+            case EventCodes.NewLootChest:
+                HandleNewLootChest(parameters);
+                break;
+            case EventCodes.LootChestOpened:
+                HandleLootChestOpened(parameters);
                 break;
         }
     }
@@ -504,7 +515,12 @@ public class GameEventHandler
                 string name = nameObj?.ToString() ?? "";
                 if (id != 0 && !string.IsNullOrWhiteSpace(name))
                 {
-                    CombatTracker.Instance.RegisterEntity(id, name);
+                    int mainHand = 0;
+                    if (parameters.TryGetValue(40, out object? equipObj))
+                    {
+                        mainHand = ExtractFirstEquipmentIndex(equipObj);
+                    }
+                    CombatTracker.Instance.RegisterEntity(id, name, mainHand);
                 }
             }
         }
@@ -512,6 +528,47 @@ public class GameEventHandler
         {
             Log.Debug(ex, "Error parsing NewCharacter event");
         }
+    }
+
+    private void HandleCharacterEquipmentChanged(Dictionary<byte, object> parameters)
+    {
+        try
+        {
+            if (parameters.TryGetValue(0, out object? objId))
+            {
+                long id = SafeToLong(objId);
+                int mainHand = 0;
+                if (parameters.TryGetValue(2, out object? equipObj))
+                {
+                    mainHand = ExtractFirstEquipmentIndex(equipObj);
+                }
+                CombatTracker.Instance.UpdateEntityWeapon(id, mainHand);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Error parsing CharacterEquipmentChanged event");
+        }
+    }
+
+    private static int ExtractFirstEquipmentIndex(object? equipObj)
+    {
+        if (equipObj == null) return 0;
+        try
+        {
+            if (equipObj is short[] shorts && shorts.Length > 0) return shorts[0];
+            if (equipObj is int[] ints && ints.Length > 0) return ints[0];
+            if (equipObj is byte[] bytes && bytes.Length >= 2) return BitConverter.ToInt16(bytes, 0);
+            if (equipObj is IEnumerable list)
+            {
+                foreach (var item in list)
+                {
+                    return SafeToInt(item);
+                }
+            }
+        }
+        catch { }
+        return 0;
     }
 
     public static int SafeToInt(object? value) => value switch
@@ -609,5 +666,89 @@ public class GameEventHandler
             result.Add(SafeToInt(val));
         }
         return result;
+    }
+
+    private void HandleNewLootChest(Dictionary<byte, object> parameters)
+    {
+        try
+        {
+            int objId = 0;
+            if (parameters.TryGetValue(0, out object? rawId)) objId = SafeToInt(rawId);
+            if (objId == 0) return;
+
+            string chestName = "";
+            if (parameters.TryGetValue(3, out object? p3)) chestName = p3?.ToString() ?? "";
+            if (string.IsNullOrEmpty(chestName) && parameters.TryGetValue(4, out object? p4)) chestName = p4?.ToString() ?? "";
+            if (string.IsNullOrEmpty(chestName) && parameters.TryGetValue(14, out object? p14)) chestName = p14?.ToString() ?? "";
+
+            string upper = chestName.ToUpperInvariant();
+            string category = "Open World";
+            if (upper.Contains("SOLO")) category = "Solo Dungeon";
+            else if (upper.Contains("CORRUPTED")) category = "Corrupted Dungeon";
+            else if (upper.Contains("HELL")) category = "Hellgate";
+            else if (upper.Contains("AVALON") && upper.Contains("DUNGEON")) category = "Avalonian Dungeon";
+            else if (upper.Contains("ROADS") || upper.Contains("AVALON")) category = "Avalonian Roads";
+            else if (upper.Contains("MISTS") || upper.Contains("ANCIENT")) category = "Ancient Lands";
+            else if (upper.Contains("STATIC")) category = "Static Dungeons";
+            else if (upper.Contains("STANDARD") || upper.Contains("GROUP")) category = "Standard Dungeon";
+            else if (_currentLocation.Contains("Dungeon", StringComparison.OrdinalIgnoreCase)) category = "Solo Dungeon";
+
+            string rarity = "green";
+            if (upper.Contains("LEGENDARY") || upper.Contains("GOLD")) rarity = "gold";
+            else if (upper.Contains("RARE") || upper.Contains("PURPLE")) rarity = "purple";
+            else if (upper.Contains("UNCOMMON") || upper.Contains("BLUE")) rarity = "blue";
+            else rarity = "green";
+
+            _activeChests[objId] = (chestName, category, rarity);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Error handling NewLootChest");
+        }
+    }
+
+    private void HandleLootChestOpened(Dictionary<byte, object> parameters)
+    {
+        try
+        {
+            int objId = 0;
+            if (parameters.TryGetValue(0, out object? rawId)) objId = SafeToInt(rawId);
+            if (objId == 0) return;
+
+            if (_activeChests.TryGetValue(objId, out var info))
+            {
+                OnChestOpened?.Invoke(new ChestOpeningEvent
+                {
+                    ObjectId = objId,
+                    ChestType = info.ChestType,
+                    Category = info.Category,
+                    Rarity = info.Rarity,
+                    Location = _currentLocation
+                });
+            }
+            else
+            {
+                string category = "Open World";
+                if (_currentLocation.Contains("Solo", StringComparison.OrdinalIgnoreCase)) category = "Solo Dungeon";
+                else if (_currentLocation.Contains("Corrupted", StringComparison.OrdinalIgnoreCase)) category = "Corrupted Dungeon";
+                else if (_currentLocation.Contains("Hellgate", StringComparison.OrdinalIgnoreCase)) category = "Hellgate";
+                else if (_currentLocation.Contains("Mists", StringComparison.OrdinalIgnoreCase)) category = "Ancient Lands";
+                else if (_currentLocation.Contains("Avalon", StringComparison.OrdinalIgnoreCase)) category = "Avalonian Roads";
+                else if (_currentLocation.Contains("Dungeon", StringComparison.OrdinalIgnoreCase)) category = "Standard Dungeon";
+
+                OnChestOpened?.Invoke(new ChestOpeningEvent
+                {
+                    ObjectId = objId,
+                    ChestType = "CHEST",
+                    Category = category,
+                    Rarity = "green",
+                    Location = _currentLocation
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Error handling LootChestOpened");
+        }
     }
 }

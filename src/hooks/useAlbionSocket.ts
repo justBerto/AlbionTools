@@ -6,6 +6,7 @@ interface UseAlbionSocketProps {
   onSessionStatsUpdate?: (stats: SessionStats) => void;
   onPartyUpdate?: (party: PartyMember[]) => void;
   onLootReceived?: (loot: LootItem) => void;
+  onChestOpened?: (chest: import("../types").ChestOpenedEvent) => void;
   onDungeonEvent?: (event: any) => void;
   onZoneEntered?: (zone: { clusterIndex: string; clusterName: string; tier: string; danger: any; enteredAt: string }) => void;
 }
@@ -68,6 +69,9 @@ export function useAlbionSocket(props: UseAlbionSocketProps = {}) {
                 break;
               case "NEW_LOOT":
                 propsRef.current.onLootReceived?.(payload.data);
+                break;
+              case "CHEST_OPENED":
+                propsRef.current.onChestOpened?.(payload.data);
                 break;
               case "DUNGEON_EVENT":
                 propsRef.current.onDungeonEvent?.(payload.data);

@@ -84,7 +84,7 @@ export const FirstStartGuideModal: React.FC<FirstStartGuideModalProps> = ({
             <img 
               src="/assets/albion_icon.png" 
               alt="AlbionTools" 
-              className="w-8 h-8 object-contain drop-shadow" 
+              className="w-9 h-9 rounded-lg object-contain shadow-sm border border-slate-700/50 drop-shadow" 
             />
             <div>
               <h2 className="text-base font-bold text-slate-100 font-['Outfit']">

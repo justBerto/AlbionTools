@@ -16,6 +16,7 @@ public class CombatantRecord
 {
     public long ObjectId { get; set; }
     public string Name { get; set; } = "";
+    public int MainHandItemIndex { get; set; }
     public double TotalDamageDealt { get; set; }
     public double TotalDamageTaken { get; set; }
     public double TotalHealingDealt { get; set; }
@@ -96,14 +97,14 @@ public class CombatTracker
         record.Name = LocalPlayerName;
     }
 
-    public void RegisterEntity(long objectId, string name)
+    public void RegisterEntity(long objectId, string name, int mainHandIndex = 0)
     {
         if (objectId == 0 || string.IsNullOrWhiteSpace(name)) return;
 
         _objectIdToName[objectId] = name;
 
-        // If this entity belongs to someone in party, update their ObjectId
-        if (_partyMembers.Contains(name))
+        // If this entity belongs to someone in party or is local player, update their ObjectId & weapon
+        if (_partyMembers.Contains(name) || (!string.IsNullOrWhiteSpace(LocalPlayerName) && name.Equals(LocalPlayerName, StringComparison.OrdinalIgnoreCase)))
         {
             var record = _combatantsByName.GetOrAdd(name, pName => new CombatantRecord
             {
@@ -111,6 +112,23 @@ public class CombatTracker
                 Name = pName
             });
             record.ObjectId = objectId;
+            if (mainHandIndex > 0)
+            {
+                record.MainHandItemIndex = mainHandIndex;
+            }
+        }
+    }
+
+    public void UpdateEntityWeapon(long objectId, int mainHandIndex)
+    {
+        if (objectId == 0 || mainHandIndex <= 0) return;
+        if (_objectIdToName.TryGetValue(objectId, out var name))
+        {
+            if (_combatantsByName.TryGetValue(name, out var record))
+            {
+                record.MainHandItemIndex = mainHandIndex;
+                OnCombatUpdated?.Invoke();
+            }
         }
     }
 
@@ -352,6 +370,8 @@ public class CombatTracker
             damagePercentage = Math.Round((c.TotalDamageDealt / totalPartyDamage) * 100.0, 1),
             hps = c.Hps,
             role = c.Hps > c.Dps ? "Healer" : "DPS",
+            weapon = c.MainHandItemIndex > 0 ? $"ITEM_{c.MainHandItemIndex}" : null,
+            weaponIcon = c.MainHandItemIndex > 0 ? $"https://render.albiononline.com/v1/item/ITEM_{c.MainHandItemIndex}.png" : null,
             spells = c.Spells.Values.Select(s => new
             {
                 id = s.SpellIndex.ToString(),

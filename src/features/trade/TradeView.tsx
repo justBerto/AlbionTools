@@ -164,7 +164,8 @@ export const TradeView: React.FC = () => {
         !q || 
         item.name.toLowerCase().includes(q) || 
         item.id.toLowerCase().includes(q) ||
-        item.subCategory.toLowerCase().includes(q);
+        item.subCategory.toLowerCase().includes(q) ||
+        (item.tierNames && Object.values(item.tierNames).some((tn) => tn.toLowerCase().includes(q)));
 
       return matchCat && matchSub && matchSearch;
     });
@@ -175,7 +176,11 @@ export const TradeView: React.FC = () => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase().trim();
     return COMPLETE_ITEM_CATALOG.filter(
-      (item) => item.name.toLowerCase().includes(q) || item.id.toLowerCase().includes(q) || item.subCategory.toLowerCase().includes(q)
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q) ||
+        item.subCategory.toLowerCase().includes(q) ||
+        (item.tierNames && Object.values(item.tierNames).some((tn) => tn.toLowerCase().includes(q)))
     ).slice(0, 12);
   }, [searchQuery]);
 
